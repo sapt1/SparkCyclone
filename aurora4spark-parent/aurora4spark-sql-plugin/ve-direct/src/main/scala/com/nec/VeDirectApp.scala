@@ -50,26 +50,42 @@ void sum_pairwise(double *a, double *b, double *c, int n)
       lib.sum.args_type(py.eval("b\"double*\""), "int")
       lib.sum.ret_type("double")
 
-//      lib.sum_pairwise.args_type(
-//        py.eval("b\"double*\""),
-//        py.eval("b\"double*\""),
-//        py.eval("b\"double*\""),
-//        "int"
-//      )
-//      lib.sum_pairwise.ret_type("double")
+      lib.sum_pairwise.args_type(
+        py.eval("b\"double*\""),
+        py.eval("b\"double*\""),
+        py.eval("b\"double*\""),
+        "int"
+      )
+      lib.sum_pairwise.ret_type("double")
       val np = veo.np
 
       val numbers = Seq[Double](1, 2, 3).toPythonProxy
+      val numbers2 = Seq[Double](2, 3, 4).toPythonProxy
       val np_numbers = np.array(numbers)
-      val a_ve = proc.alloc_mem(py.Dynamic.global.len(numbers) * 8)
+      val np_numbers2 = np.array(numbers2)
+      val np_numbers3 = np.array(numbers2)
+//      val a_ve = proc.alloc_mem(py.Dynamic.global.len(numbers) * 8)
+//      val b_ve = proc.alloc_mem(py.Dynamic.global.len(numbers) * 8)
+//      val c_ve = proc.alloc_mem(py.Dynamic.global.len(numbers) * 8)
       try {
-        proc.write_mem(a_ve, np_numbers, py.Dynamic.global.len(numbers) * 8)
-        val req = lib.sum(ctxt, a_ve, py.Dynamic.global.len(numbers))
-        val sum = req.wait_result()
+//        proc.write_mem(a_ve, np_numbers, py.Dynamic.global.len(numbers) * 8)
+//        proc.write_mem(b_ve, np_numbers2, py.Dynamic.global.len(numbers) * 8)
+//        val req = lib.sum(ctxt, a_ve, py.Dynamic.global.len(numbers))
+        lib.sum_pairwise(
+          ctxt,
+          veo.OnStack(np_numbers, inout = veo.INTENT_IN),
+          veo.OnStack(np_numbers2, inout = veo.INTENT_IN),
+          veo.OnStack(np_numbers3, inout = veo.INTENT_INOUT),
+          py.Dynamic.global.len(numbers)
+        )
+        np_numbers3.as[Seq[Double]].zipWithIndex.foreach { case (v, i) =>
+          println(s"Index ${i} => $v")
+        }
+//        val sum = req.wait_result()
 
-        println("We made it work yey!!!")
-        println(sum)
-      } finally proc.free_mem(a_ve)
+//        println("We made it work yey!!!")
+//        println(sum)
+      } finally { /*proc.free_mem(a_ve) */ }
     } finally CPythonInterpreter.eval("del proc")
   }
 }
