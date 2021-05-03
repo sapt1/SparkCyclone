@@ -1,3 +1,4 @@
+numbers = [1,2,3]
 from nlcpy import veo
 import os
 import sys
@@ -33,7 +34,7 @@ proc.write_mem(a_ve, np_numbers, len(numbers) * 8)
 req = lib.sum(ctxt, a_ve, len(numbers))
 sum = req.wait_result()
 
-print(sum)
-
 proc.free_mem(a_ve)
 del proc
+
+sum
