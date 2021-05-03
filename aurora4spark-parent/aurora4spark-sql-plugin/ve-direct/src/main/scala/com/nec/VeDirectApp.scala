@@ -73,6 +73,11 @@ void sum_pairwise(double *a, double *b, double *c, int n)
       val np_numbers = np.array(numbers)
       val np_numbers2 = np.array(numbers2)
       val np_numbers3 = np.array(numbers3)
+
+      val pos_1 = np_numbers2.__array_interface__.bracketAccess("data").bracketAccess(0).as[Long]
+
+      /** Try to set a value here */
+      getUnsafe.putDouble(pos_1, 9)
       val b_ve = proc.alloc_mem(py.Dynamic.global.len(numbers) * 8)
       try {
         proc.write_mem(b_ve, np_numbers3, py.Dynamic.global.len(numbers) * 8)
