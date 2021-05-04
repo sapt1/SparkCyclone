@@ -87,5 +87,11 @@ lazy val `ve-direct` = project
       val tgt = resourceBase / assembled.name
       IO.copyFile(assembled, tgt)
       Seq(tgt)
+    },
+    assembly / assemblyMergeStrategy := {
+      case "module-info.class" => MergeStrategy.discard
+      case x =>
+        val oldStrategy = (assembly / assemblyMergeStrategy).value
+        oldStrategy(x)
     }
   )

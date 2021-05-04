@@ -3,9 +3,10 @@ package com.nec
 import me.shadaj.scalapy.interpreter.CPythonInterpreter
 
 import java.nio.file.Paths
-import me.shadaj.scalapy.py.SeqConverters
 import me.shadaj.scalapy.readwrite.Writer
 import sun.misc.Unsafe
+
+import java.time.Instant
 
 object VeDirectApp {
 
@@ -67,41 +68,57 @@ void sum_pairwise(double *a, double *b, double *c, int n)
       lib.sum_pairwise.ret_type("double")
       val np = veo.np
 
-      val numbers = Seq[Double](1, 2, 3).toPythonProxy
-      val numbers2 = Seq[Double](2, 3, 4).toPythonProxy
-      val numbers3 = Seq.fill[Double](3)(0).toPythonProxy
-      val np_numbers = np.array(numbers)
-      val np_numbers2 = np.array(numbers2)
-      val np_numbers3 = np.array(numbers3)
+      def sumPairwise(inputs: List[(Double, Double)]): List[Double] = {
 
-      val pos_1 = np_numbers2.__array_interface__.bracketAccess("data").bracketAccess(0).as[Long]
+        val ln = inputs.length
 
-      /** Try to set a value here */
-      getUnsafe.putDouble(pos_1, 9)
-      val b_ve = proc.alloc_mem(py.Dynamic.global.len(numbers) * 8)
-      try {
-        proc.write_mem(b_ve, np_numbers3, py.Dynamic.global.len(numbers) * 8)
-        val req = lib.sum_pairwise(
-          ctxt,
-          veo.OnStack(np_numbers, inout = veo.INTENT_IN),
-          veo.OnStack(np_numbers2, inout = veo.INTENT_IN),
-          b_ve,
-          py.Dynamic.global.len(numbers)
-        )
-        req.wait_result()
+        /**
+         * TODO pass a Java-created pointer rather than a Python-created pointer. This requires
+         * direct AVEO API from the JVM
+         */
+        val np_In_1 = np.zeros(ln, dtype = np.double)
+        val np_In_2 = np.zeros(ln, dtype = np.double)
+        val np_Out_1 = np.zeros(ln, dtype = np.double)
 
-        proc.read_mem(np_numbers3, b_ve, py.Dynamic.global.len(numbers) * 8)
-        val pos = np_numbers3.__array_interface__.bracketAccess("data").bracketAccess(0).as[Long]
+        val Pos_In_1 = np_In_1.__array_interface__.bracketAccess("data").bracketAccess(0).as[Long]
+        val Pos_In_2 = np_In_2.__array_interface__.bracketAccess("data").bracketAccess(0).as[Long]
+        val Pos_Out_1 = np_Out_1.__array_interface__.bracketAccess("data").bracketAccess(0).as[Long]
 
-        List(0, 1, 2)
-          .map { num =>
-            getUnsafe.getDouble(pos + (8 * num))
-          }
-          .zipWithIndex
-          .foreach { case (v, i) =>
-            println(s"Index ${i} => $v")
-          }
-      } finally { /*proc.free_mem(a_ve) */ }
+        inputs.iterator.zipWithIndex.foreach { case ((a, b), idx) =>
+          getUnsafe.putDouble(Pos_In_1 + idx * 8, a)
+          getUnsafe.putDouble(Pos_In_2 + idx * 8, b)
+        }
+
+        val Pos_Out_1_VE = proc.alloc_mem(ln * 8)
+        try {
+          val req = lib.sum_pairwise(
+            ctxt,
+            veo.OnStack(np_In_1, inout = veo.INTENT_IN),
+            veo.OnStack(np_In_2, inout = veo.INTENT_IN),
+            Pos_Out_1_VE,
+            ln
+          )
+          req.wait_result()
+
+          proc.read_mem(np_Out_1, Pos_Out_1_VE, ln * 8)
+
+          inputs.indices.iterator.map { num =>
+            getUnsafe.getDouble(Pos_Out_1 + (8 * num))
+          }.toList
+        } finally {
+          proc.free_mem(Pos_Out_1_VE)
+        }
+      }
+
+      val small: List[(Double, Double)] = List((1, 2), (2, 4), (5, 9))
+      val large = List.fill[(Double, Double)](5000)(
+        (scala.util.Random.nextDouble(), scala.util.Random.nextDouble())
+      )
+      println(Instant.now())
+      println(sumPairwise(small))
+      println(Instant.now())
+      println(sumPairwise(large).take(50))
+      println(Instant.now())
     } finally CPythonInterpreter.eval("del proc")
   }
 }
