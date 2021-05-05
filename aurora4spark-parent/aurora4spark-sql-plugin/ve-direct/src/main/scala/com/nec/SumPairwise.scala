@@ -1,6 +1,8 @@
 package com.nec
 
 import com.nec.VeFunction.StackArgument
+import com.nec.aurora.Aurora
+import org.bytedeco.javacpp.{DoublePointer, LongPointer}
 
 object SumPairwise {
   val C_Definition = """
@@ -25,29 +27,35 @@ object SumPairwise {
     ret_type = None
   )
 
-  /**
-   * Currently, this is the minimum code needed to implement SumPairwise -- we can do better more
-   * generically, but this will suffice for now.
-   */
-  def sumPairwise(veCallContext: VeCallContext, inputs: List[(Double, Double)]): List[Double] = {
-    veCallContext.execute(
-      veFunction = Ve_F,
-      ln = inputs.length,
-      uploadData = { rawDataPositions =>
-        inputs.iterator.zipWithIndex.foreach { case ((a, b), idx) =>
-          rawDataPositions.args(0).foreach { Pos_In_1 =>
-            veCallContext.unsafe.putDouble(Pos_In_1 + idx * 8, a)
-          }
-          rawDataPositions.args(1).foreach { Pos_In_2 =>
-            veCallContext.unsafe.putDouble(Pos_In_2 + idx * 8, b)
-          }
-        }
-      },
-      loadData = { (ret_v, poss) =>
-        inputs.indices.iterator.map { num =>
-          veCallContext.unsafe.getDouble(poss.args.flatten.last + (8 * num))
-        }.toList
-      }
+  /** Leaky - todo deallocate */
+  def pairwise_sum_doubles(
+    veJavaContext: VeJavaContext,
+    doubles: List[(Double, Double)]
+  ): List[Double] = {
+    import veJavaContext._
+    val our_args = Aurora.veo_args_alloc()
+
+    /** Put in the raw data */
+    val dataDoublePointerA = new DoublePointer(doubles.map(_._1): _*)
+    val dataDoublePointerB = new DoublePointer(doubles.map(_._2): _*)
+    val dataDoublePointerOut = new DoublePointer(doubles.map(_ => 0: Double): _*)
+    Aurora.veo_args_set_stack(our_args, 0, 0, dataDoublePointerA.asByteBuffer(), 8 * doubles.length)
+    Aurora.veo_args_set_stack(our_args, 0, 1, dataDoublePointerB.asByteBuffer(), 8 * doubles.length)
+    Aurora.veo_args_set_stack(
+      our_args,
+      1,
+      2,
+      dataDoublePointerOut.asByteBuffer(),
+      8 * doubles.length
     )
+    Aurora.veo_args_set_i64(our_args, 3, doubles.length)
+
+    /** Call */
+    try {
+      val req_id = Aurora.veo_call_async_by_name(ctx, lib, "sum_pairwise", our_args)
+      val longPointer = new LongPointer(8)
+      Aurora.veo_call_wait_result(ctx, req_id, longPointer)
+      doubles.indices.map(i => dataDoublePointerOut.get(i)).toList
+    } finally our_args.close()
   }
 }
