@@ -79,7 +79,9 @@ lazy val `ve-direct` = project
   .settings(
     libraryDependencies ++= Seq(
       "org.scalatest" %% "scalatest" % "3.2.7" % "test,acc,it",
-      "me.shadaj" %% "scalapy-core" % "0.4.2"
+      "me.shadaj" %% "scalapy-core" % "0.4.2",
+      "org.bytedeco" % "javacpp" % "1.5.5"
+//      "org.bytedeco" % "javacv-platform" % "1.5.5"
     ),
     IntegrationTest / managedResources := {
       val resourceBase = (IntegrationTest / resourceManaged).value
@@ -89,7 +91,9 @@ lazy val `ve-direct` = project
       Seq(tgt)
     },
     assembly / assemblyMergeStrategy := {
-      case "module-info.class" => MergeStrategy.discard
+      case v if v.contains("module-info.class")   => MergeStrategy.discard
+      case v if v.contains("reflect-config.json") => MergeStrategy.discard
+      case v if v.contains("jni-config.json")     => MergeStrategy.discard
       case x =>
         val oldStrategy = (assembly / assemblyMergeStrategy).value
         oldStrategy(x)

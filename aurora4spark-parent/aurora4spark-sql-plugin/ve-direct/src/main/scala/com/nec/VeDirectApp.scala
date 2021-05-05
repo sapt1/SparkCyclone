@@ -1,12 +1,15 @@
 package com.nec
 
 import com.nec.VeFunction.StackArgument
+import com.nec.aurora.Aurora
 import me.shadaj.scalapy.interpreter.CPythonInterpreter
 
 import java.nio.file.Paths
 import me.shadaj.scalapy.readwrite.Writer
+import org.bytedeco.javacpp.{BytePointer, DoublePointer, LongPointer}
 import sun.misc.Unsafe
 
+import java.nio.ByteBuffer
 import java.time.Instant
 
 object VeDirectApp {
@@ -18,6 +21,49 @@ object VeDirectApp {
   }
 
   def main(args: Array[String]): Unit = {
+    val proc = Aurora.veo_proc_create(0)
+    try {
+      val ctx = Aurora.veo_context_open(proc)
+      try {
+        val ve_so_name = "/home/william/_ve_build/_sum.so"
+        val lib = Aurora.veo_load_library(proc, ve_so_name)
+        println(s"Lib load = ${lib}")
+        val our_args = Aurora.veo_args_alloc()
+
+        /** Put in the raw data */
+        val dataDoublePointer = new DoublePointer(3, 6)
+        println(s"First result = ${dataDoublePointer.get()}")
+        val vmem_pointer = new LongPointer(1)
+        val allocRes = Aurora.veo_alloc_mem(proc, vmem_pointer, 8 * 2)
+        println(s"Alloc rec = ${allocRes}")
+        val ves = Aurora.veo_write_mem(proc, vmem_pointer.get(), dataDoublePointer, 2 * 8)
+        println(s"Write mem result = ${ves}")
+        val bb = ByteBuffer.allocate(8)
+        bb.putLong(vmem_pointer.get())
+
+        val ves2 =
+          Aurora.veo_args_set_stack(our_args, 0, 0, dataDoublePointer.asByteBuffer(), 8 * 2)
+        val ves3 = Aurora.veo_args_set_i64(our_args, 1, 2)
+        println(s"Set args: $ves2, $ves3")
+
+        /** Call */
+        try {
+          val req_id = Aurora.veo_call_async_by_name(ctx, lib, "sum", our_args)
+
+          println(s"Call async ==> ${req_id}")
+
+          /** Get a result back */
+          val longPointer = new LongPointer(8)
+          val res3 = Aurora.veo_call_wait_result(ctx, req_id, longPointer)
+          println(s"WaitResult = $res3")
+          println(longPointer.asByteBuffer().getDouble(0))
+        } finally our_args.close()
+        ctx.close()
+      } finally Aurora.veo_context_close(ctx)
+    } finally Aurora.veo_proc_destroy(proc)
+  }
+
+  def py_main(args: Array[String]): Unit = {
     import me.shadaj.scalapy.py
     val veo = py.module("nlcpy.veo")
     val bld = veo.VeBuild()
