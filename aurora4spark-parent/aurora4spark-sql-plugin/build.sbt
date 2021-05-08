@@ -12,6 +12,8 @@ val slf4jVersion = "1.7.30"
 lazy val root = project
   .in(file("."))
   .configs(AcceptanceTest)
+  .dependsOn(`veo-direct`)
+
 lazy val example = project
   .dependsOn(root)
   .settings(

@@ -1,10 +1,11 @@
 package com.nec.spark
 
-import com.nec.spark.agile.{AveragingPlanner, AveragingSparkPlan}
+import com.nec.spark.agile.AveragingSparkPlanOffHeap.OffHeapDoubleAverager
+import com.nec.spark.agile.{AveragingPlanner, AveragingSparkPlanOffHeap}
 import org.apache.spark.sql.SparkSessionExtensions
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.rules.Rule
-import org.apache.spark.sql.execution.{ColumnarRule, SparkPlan}
+import org.apache.spark.sql.execution.{ColumnarRule, RowToColumnarExec, SparkPlan}
 
 final class LocalVeoExtension extends (SparkSessionExtensions => Unit) with Logging {
   override def apply(sparkSessionExtensions: SparkSessionExtensions): Unit = {
@@ -15,7 +16,10 @@ final class LocalVeoExtension extends (SparkSessionExtensions => Unit) with Logg
             AveragingPlanner
               .matchPlan(sparkPlan)
               .map { childPlan =>
-                AveragingSparkPlan(childPlan.sparkPlan, AveragingSparkPlan.averageLocalScala)
+                AveragingSparkPlanOffHeap(
+                  RowToColumnarExec(childPlan.sparkPlan),
+                  OffHeapDoubleAverager.UnsafeBased
+                )
               }
               .getOrElse(sparkPlan)
       }
