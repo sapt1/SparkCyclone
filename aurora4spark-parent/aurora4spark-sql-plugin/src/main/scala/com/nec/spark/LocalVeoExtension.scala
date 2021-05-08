@@ -1,5 +1,7 @@
 package com.nec.spark
 
+import com.nec.VeDirectApp.compile_c
+import com.nec.spark.LocalVeoExtension.ve_so_name
 import com.nec.spark.agile.AveragingSparkPlanOffHeap.OffHeapDoubleAverager
 import com.nec.spark.agile.{AveragingPlanner, AveragingSparkPlanOffHeap}
 import org.apache.spark.sql.SparkSessionExtensions
@@ -7,6 +9,9 @@ import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.sql.execution.{ColumnarRule, RowToColumnarExec, SparkPlan}
 
+object LocalVeoExtension {
+  lazy val ve_so_name = compile_c()
+}
 final class LocalVeoExtension extends (SparkSessionExtensions => Unit) with Logging {
   override def apply(sparkSessionExtensions: SparkSessionExtensions): Unit = {
     sparkSessionExtensions.injectColumnar({ sparkSession =>
@@ -18,7 +23,7 @@ final class LocalVeoExtension extends (SparkSessionExtensions => Unit) with Logg
               .map { childPlan =>
                 AveragingSparkPlanOffHeap(
                   RowToColumnarExec(childPlan.sparkPlan),
-                  OffHeapDoubleAverager.UnsafeBased
+                  OffHeapDoubleAverager.VeoBased(ve_so_name)
                 )
               }
               .getOrElse(sparkPlan)

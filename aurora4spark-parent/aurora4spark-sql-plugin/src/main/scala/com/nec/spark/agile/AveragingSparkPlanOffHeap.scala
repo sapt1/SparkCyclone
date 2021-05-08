@@ -1,5 +1,8 @@
 package com.nec.spark.agile
 
+import com.nec.VeDirectApp.compile_c
+import com.nec.aurora.Aurora
+import com.nec.{AvgSimple, VeJavaContext}
 import com.nec.spark.agile.AveragingSparkPlanOffHeap.OffHeapDoubleAverager
 import com.nec.spark.agile.SingleValueStubPlan.SparkDefaultColumnName
 import org.apache.spark.rdd.RDD
@@ -33,14 +36,21 @@ object AveragingSparkPlanOffHeap {
           .sum / count
       }
     }
-    object VeoBased extends OffHeapDoubleAverager {
+
+    case class VeoBased(ve_so_name: String) extends OffHeapDoubleAverager {
       override def average(memoryLocation: Long, count: ColumnIndex): Double = {
-        (0 until count)
-          .map { i =>
-            getUnsafe.getDouble(memoryLocation + i * 8)
-          }
-          .toList
-          .sum / count
+        println(s"SO name: ${ve_so_name}")
+        val proc = Aurora.veo_proc_create(0)
+        println(s"Created proc = ${proc}")
+        try {
+          val ctx: Aurora.veo_thr_ctxt = Aurora.veo_context_open(proc)
+          println(s"Created ctx = ${ctx}")
+          try {
+            val lib: Long = Aurora.veo_load_library(proc, ve_so_name)
+            val vej = new VeJavaContext(ctx, lib)
+            AvgSimple.avg_doubles_mem(vej, memoryLocation, count)
+          } finally Aurora.veo_context_close(ctx)
+        } finally Aurora.veo_proc_destroy(proc)
       }
     }
   }
