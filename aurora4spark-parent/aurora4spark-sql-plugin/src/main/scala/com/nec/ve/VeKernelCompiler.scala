@@ -29,7 +29,11 @@ object VeKernelCompiler {
         "-finline-functions",
         "-pthread",
         "-report-all",
-        "-fdiag-vector=2"
+        "-static",
+        "-fdiag-vector=2",
+        "-I/usr/include/",
+        "-I/usr/lib64/glib-2.0/include/",
+        "-I/usr/include/glib-2.0/"
       ) ++
         List(
           if (doDebug) List("-D", "DEBUG=1") else Nil,
