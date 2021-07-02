@@ -143,7 +143,7 @@ object JoinPlanSpec {
       val ds = sparkSession
         .sql("SELECT a.value + b.value FROM a INNER JOIN b ON a.key = b.key")
         .debugSqlHere
-        .as[(Double, Double)]
+        .as[(Double)]
       val result = ds.collect().toList
       assert(result.sortBy(_._1) == List((1.0, 2.0), (2.0, 3.0)))
     }
