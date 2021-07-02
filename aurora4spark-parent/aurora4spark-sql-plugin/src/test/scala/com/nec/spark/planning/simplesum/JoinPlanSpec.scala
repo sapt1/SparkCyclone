@@ -145,7 +145,7 @@ object JoinPlanSpec {
         .debugSqlHere
         .as[(Double)]
       val result = ds.collect().toList
-      assert(result.sortBy(_._1) == List((1.0, 2.0), (2.0, 3.0)))
+      assert(result.sorted == List((3.0), (5.0)))
     }
     override def benchmark(sparkSession: SparkSession): Unit = {
       verify(sparkSession)
