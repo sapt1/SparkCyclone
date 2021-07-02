@@ -141,7 +141,7 @@ object JoinPlanSpec {
     override def verify(sparkSession: SparkSession): Unit = {
       import sparkSession.implicits._
       val ds = sparkSession
-        .sql("SELECT a.value, b.value FROM a INNER JOIN b ON a.key = b.key")
+        .sql("SELECT a.value + b.value FROM a INNER JOIN b ON a.key = b.key")
         .debugSqlHere
         .as[(Double, Double)]
       val result = ds.collect().toList
