@@ -56,7 +56,7 @@ object BenchTestingPossibilities {
       testingTarget.expectedString.foreach { str =>
         assert(
           dataframe.queryExecution.executedPlan.toString().contains(str),
-          "Expected the plan to match the testing target"
+          s"Expected the plan to match the testing target, we are in ${testingTarget.label}"
         )
       }
       val result = dataframe.collect()
@@ -70,7 +70,7 @@ object BenchTestingPossibilities {
       testingTarget.expectedString.foreach { str =>
         assert(
           dataset.queryExecution.executedPlan.toString().contains(str),
-          "Expected the plan to match the testing target"
+          s"Expected the plan to match the testing target, we are in ${testingTarget.label}"
         )
       }
       assert(dataset.collect().toList == List(expectedResult), message)
