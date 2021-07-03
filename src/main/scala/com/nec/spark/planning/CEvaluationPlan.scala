@@ -172,12 +172,14 @@ final case class CEvaluationPlan(
             val nr = columnarBatch.numRows()
             root.setRowCount(nr)
 
-            val inputVectors: List[Float8Vector] = inputAttributes.zipWithIndex.map {
+            val inputVectors: List[Float8Vector] = inputAttributes.zipWithIndex.par.map {
               case (attr, idx) =>
                 val fv = root.getVector(idx).asInstanceOf[Float8Vector]
                 val theCol = columnarBatch.column(idx)
-                (0 until nr).foreach { rowId =>
+                var rowId = 0
+                while (rowId < nr) {
                   fv.set(rowId, theCol.getDouble(rowId))
+                  rowId = rowId + 1
                 }
                 fv
             }.toList
