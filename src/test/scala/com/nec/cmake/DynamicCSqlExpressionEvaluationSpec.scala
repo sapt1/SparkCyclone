@@ -4,10 +4,10 @@ import com.nec.arrow.CArrowNativeInterfaceNumeric
 import com.nec.arrow.TransferDefinitions
 import com.nec.cmake.DynamicCSqlExpressionEvaluationSpec.configuration
 import com.nec.spark.SparkAdditions
-import com.nec.spark.cgescape.CodegenEscapeSpec.makeCsvNumsMultiColumn
 import com.nec.spark.planning.CEvaluationPlan.NativeEvaluator
 import com.nec.spark.planning.VERewriteStrategy
-import com.nec.spark.planning.simplesum.SimpleSumPlanTest.Source
+import com.nec.testing.SampleSource
+import com.nec.testing.SampleSource.makeCsvNumsMultiColumn
 import com.nec.testing.Testing.DataSize.SanityCheckSize
 import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.SparkSession
@@ -54,7 +54,7 @@ final class DynamicCSqlExpressionEvaluationSpec
       "SELECT AVG(2 * value), SUM(value - 1), value / 2 FROM nums GROUP BY (value / 2)" -> 0.0d
     ).zipWithIndex.take(4).foreach { case ((sql, expectation), idx) =>
       s"(n${idx}) ${sql}" in withSparkSession2(configuration) { sparkSession =>
-        Source.CSV.generate(sparkSession, SanityCheckSize)
+        SampleSource.CSV.generate(sparkSession, SanityCheckSize)
         import sparkSession.implicits._
         assert(sparkSession.sql(sql).debugSqlHere.as[Double].collect().toList == List(expectation))
       }
@@ -107,7 +107,7 @@ final class DynamicCSqlExpressionEvaluationSpec
     val sql1 = "SELECT AVG(2 * value), SUM(value) FROM nums"
 
     s"Multi-column: ${sql1}" in withSparkSession2(configuration) { sparkSession =>
-      Source.CSV.generate(sparkSession, SanityCheckSize)
+      SampleSource.CSV.generate(sparkSession, SanityCheckSize)
       import sparkSession.implicits._
       assert(
         sparkSession.sql(sql1).debugSqlHere.as[(Double, Double)].collect().toList == List(
@@ -119,7 +119,7 @@ final class DynamicCSqlExpressionEvaluationSpec
     val sql2 = "SELECT AVG(2 * value), SUM(value - 1), value / 2 FROM nums GROUP BY (value / 2)"
 
     s"Group by is possible with ${sql2}" ignore withSparkSession2(configuration) { sparkSession =>
-      Source.CSV.generate(sparkSession, SanityCheckSize)
+      SampleSource.CSV.generate(sparkSession, SanityCheckSize)
       import sparkSession.implicits._
       assert(
         sparkSession.sql(sql2).debugSqlHere.as[(Double, Double, Double)].collect().toList == Nil

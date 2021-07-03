@@ -7,6 +7,9 @@ import com.nec.spark.SampleTestData.SampleTwoColumnParquet
 import com.nec.spark.SparkAdditions
 import com.nec.spark.cgescape.CodegenEscapeSpec._
 import com.nec.spark.SampleTestData.SampleMultiColumnCSV
+import com.nec.testing.SampleSource.makeCsvNums
+import com.nec.testing.SampleSource.makeMemoryNums
+import com.nec.testing.SampleSource.makeParquetNums
 import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.Encoder
 import org.apache.spark.sql.Encoders
@@ -103,73 +106,5 @@ final class CodegenEscapeSpec extends AnyFreeSpec with BeforeAndAfter with Spark
 }
 
 object CodegenEscapeSpec {
-  val SharedName = "nums"
-
-  def makeMemoryNums(sparkSession: SparkSession): Unit = {
-    import sparkSession.implicits._
-    Seq(1d, 2d, 3d, 4d, 52d)
-      .toDS()
-      .createOrReplaceTempView(SharedName)
-  }
-
-  final case class SomeTab(num: Double, mapTo: Double)
-
-  def makeCsvNums(sparkSession: SparkSession): Unit = {
-    import sparkSession.implicits._
-    val schema = StructType(Array(StructField("a", DoubleType)))
-
-    sparkSession.read
-      .format("csv")
-      .schema(schema)
-      .load(SampleCSV.toString)
-      .withColumnRenamed("a", "value")
-      .as[Double]
-      .createOrReplaceTempView(SharedName)
-  }
-
-  def makeCsvNumsMultiColumn(sparkSession: SparkSession): Unit = {
-    import sparkSession.implicits._
-    val schema = StructType(Array(StructField("a", DoubleType), StructField("b", DoubleType)))
-
-    sparkSession.read
-      .format("csv")
-      .schema(schema)
-      .load(SampleMultiColumnCSV.toString)
-      .as[(Double, Double)]
-      .createOrReplaceTempView(SharedName)
-  }
-
-  def makeCsvNumsLarge(sparkSession: SparkSession): Unit = {
-    import sparkSession.implicits._
-    val schema = StructType(Array(StructField("a", DoubleType), StructField("b", DoubleType), StructField("c", DoubleType)))
-
-    sparkSession.read
-      .format("csv")
-      .schema(schema)
-      .load(LargeCSV.toString)
-      .withColumnRenamed("a", "value")
-      .createOrReplaceTempView(SharedName)
-  }
-
-  def makeParquetNums(sparkSession: SparkSession): Unit = {
-    import sparkSession.implicits._
-
-    sparkSession.read
-      .format("parquet")
-      .load(SampleTwoColumnParquet.toString)
-      .withColumnRenamed("a", "value")
-      .as[(Double, Double)]
-      .createOrReplaceTempView(SharedName)
-  }
-
-  def makeParquetNumsLarge(sparkSession: SparkSession): Unit = {
-    import sparkSession.implicits._
-
-    sparkSession.read
-      .format("parquet")
-      .load(LargeParquet.toString)
-      .withColumnRenamed("a", "value")
-      .createOrReplaceTempView(SharedName)
-  }
 
 }

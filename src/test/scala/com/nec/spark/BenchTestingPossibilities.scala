@@ -1,11 +1,12 @@
 package com.nec.spark
+
 import com.nec.cmake.DynamicCSqlExpressionEvaluationSpec.cNativeEvaluator
 import com.nec.spark.BenchTestingPossibilities.BenchTestAdditions
 import com.nec.spark.planning.VERewriteStrategy
-import com.nec.spark.planning.simplesum.SimpleSumPlanTest.Source
 import org.apache.spark.sql.SparkSession
 import org.scalatest.freespec.AnyFreeSpec
 import com.nec.spark.planning.simplesum.JoinPlanSpec
+import com.nec.testing.SampleSource
 import com.nec.testing.Testing
 import com.nec.testing.Testing.DataSize
 import com.nec.testing.Testing.TestingTarget
@@ -18,7 +19,7 @@ object BenchTestingPossibilities {
   final case class SimpleSql(
     sql: String,
     expectedResult: Double,
-    source: Source,
+    source: SampleSource,
     testingTarget: TestingTarget
   ) extends Testing {
     override def benchmark(sparkSession: SparkSession): Unit = {
@@ -99,7 +100,7 @@ object BenchTestingPossibilities {
   val possibilities: List[Testing] =
     List(
       for {
-        source <- List(Source.CSV, Source.Parquet)
+        source <- List(SampleSource.CSV, SampleSource.Parquet)
         testingTarget <- List(
           TestingTarget.VectorEngine,
           TestingTarget.PlainSpark,
