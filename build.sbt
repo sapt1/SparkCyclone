@@ -46,18 +46,11 @@ lazy val `fun-bench` = project
         val str = streams.value
         val smDir = (Compile / sourceManaged).value
         val tgt = smDir / "DynamicBenchmark.scala"
-        Def.sequential(
-          Def.task {
-            str.log.error("CLEANING...")
-            clean
-          },
-          Def.task {
-            str.log.error("Generating...")
-            if (!smDir.exists()) Files.createDirectories(smDir.toPath)
-            (root / Test / runMain).toTask(s" com.nec.spark.GenerateBenchmarksApp ${tgt}").value
-            Seq(tgt)
-          }
-        )
+        if (!smDir.exists()) Files.createDirectories(smDir.toPath)
+        Def.task {
+          (root / Test / runMain).toTask(s" com.nec.spark.GenerateBenchmarksApp ${tgt}").value
+          Seq(tgt)
+        }
       }
   )
 
