@@ -175,6 +175,8 @@ object BenchTestingPossibilities {
       }
     }
   }
+
+  val possibilitiesMap: Map[String, Testing] = possibilities.map(testing => testing.name.value -> testing).toMap
 }
 
 final class BenchTestingPossibilities extends AnyFreeSpec with BenchTestAdditions {
