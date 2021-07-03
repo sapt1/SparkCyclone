@@ -84,14 +84,18 @@ final case class CEvaluationPlan(
                 outputVector
               }
 
-            evaluator.callFunction(
-              name = "f",
-              inputArguments = inputVectors.toList.map(iv =>
-                Some(Float8VectorWrapper(iv))
-              ) ++ outputVectors.map(_ => None),
-              outputArguments =
-                inputVectors.toList.map(_ => None) ++ outputVectors.map(v => Some(v))
-            )
+            try {
+              evaluator.callFunction(
+                name = "f",
+                inputArguments = inputVectors.toList.map(iv =>
+                  Some(Float8VectorWrapper(iv))
+                ) ++ outputVectors.map(_ => None),
+                outputArguments =
+                  inputVectors.toList.map(_ => None) ++ outputVectors.map(v => Some(v))
+              )
+            } finally {
+              inputVectors.foreach(_.close())
+            }
 
             (0 until outputVectors.head.getValueCount).iterator.map { v_idx =>
               val writer = new UnsafeRowWriter(outputVectors.size)

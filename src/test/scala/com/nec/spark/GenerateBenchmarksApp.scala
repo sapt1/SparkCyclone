@@ -1,6 +1,8 @@
 package com.nec.spark
 import java.io.File
 import java.nio.file.Files
+import BenchTestingPossibilities._
+import com.nec.testing.Testing._
 
 object GenerateBenchmarksApp extends App {
   val expectedTarget = new File(args.last).getAbsoluteFile
@@ -28,15 +30,22 @@ class State_${testing.name} {
   }
 
   val methods: List[String] = {
-    BenchTestingPossibilities.possibilities.zipWithIndex.map { case (testing, idx) =>
-      s"""
+    BenchTestingPossibilities.possibilities
+      /**
+       * Exclude CMake as it's not really useful for benchmarking here. We are nonetheless
+       * adding it to .possibilities in order to do correctness testing when in the CMake scope
+       */
+      .filterNot(_.testingTarget == TestingTarget.CMake)
+      .zipWithIndex
+      .map { case (testing, idx) =>
+        s"""
       @Benchmark
       @BenchmarkMode(Array(Mode.SingleShotTime))
       def ${testing.name}(state: DynamicBenchmark.State_${testing.name}): Unit = {
         com.nec.spark.BenchTestingPossibilities.possibilities(${idx}).benchmark(state.sparkSession)
       }
       """
-    }
+      }
 
   }
   Files.write(
