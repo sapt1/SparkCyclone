@@ -56,7 +56,7 @@ object BenchTestingPossibilities {
       testingTarget.expectedString.foreach { str =>
         assert(
           dataframe.queryExecution.executedPlan.toString().contains(str),
-          s"Expected the plan to match the testing target, we are in ${testingTarget.label}"
+          s"Expected the plan to match the testing target, we are in ${testingTarget.label}; me = $this; config: ${sparkSession.sparkContext.getConf.toDebugString}"
         )
       }
       val result = dataframe.collect()
@@ -77,6 +77,7 @@ object BenchTestingPossibilities {
     }
     override def prepareSession(dataSize: DataSize): SparkSession = {
       val sparkConf = new SparkConf(loadDefaults = true)
+        .set("nec.testing.target", testingTarget.label)
       val sess = testingTarget match {
         case TestingTarget.Rapids =>
           SparkSession
