@@ -51,6 +51,7 @@ object BenchTestingPossibilities {
             .config(CODEGEN_COMMENTS.key, value = true)
             .config(key = "spark.plugins", value = classOf[AuroraSqlPlugin].getCanonicalName)
             .config(key = "spark.ui.enabled", value = false)
+            .config(key = "spark.sql.columnVector.offheap.enabled", value = "true")
             .config(sparkConf)
             .getOrCreate()
         case TestingTarget.PlainSpark =>

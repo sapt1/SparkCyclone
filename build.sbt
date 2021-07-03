@@ -27,10 +27,7 @@ lazy val `fun-bench` = project
   .dependsOn(root % "compile->test")
   .settings(
     name := "funbench",
-    Jmh / run := {
-      (Test / test).value
-      (Jmh / run).evaluated
-    },
+    Jmh / run := (Jmh / run).dependsOn((Test / test)).evaluated,
     Jmh / run / javaOptions += "-Djmh.separateClasspathJAR=true",
     Test / test :=
       Def.taskDyn {
@@ -46,16 +43,21 @@ lazy val `fun-bench` = project
       }.value,
     Compile / sourceGenerators +=
       Def.taskDyn {
-        // clean up because JMH does clear out compiled sources
-        clean.value
+        val str = streams.value
         val smDir = (Compile / sourceManaged).value
-        if (!smDir.exists()) Files.createDirectories(smDir.toPath)
         val tgt = smDir / "DynamicBenchmark.scala"
-        val genTask = (root / Test / runMain).toTask(s" com.nec.spark.GenerateBenchmarksApp ${tgt}")
-        Def.task {
-          genTask.value
-          Seq(tgt)
-        }
+        Def.sequential(
+          Def.task {
+            str.log.error("CLEANING...")
+            clean
+          },
+          Def.task {
+            str.log.error("Generating...")
+            if (!smDir.exists()) Files.createDirectories(smDir.toPath)
+            (root / Test / runMain).toTask(s" com.nec.spark.GenerateBenchmarksApp ${tgt}").value
+            Seq(tgt)
+          }
+        )
       }
   )
 
