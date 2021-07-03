@@ -34,7 +34,6 @@ final class CodegenEscapeSpec extends AnyFreeSpec with BeforeAndAfter with Spark
   private implicit val encDouble2: Encoder[(Double, Double)] = Encoders.tuple(encDouble, encDouble)
 
   "We can do a row-based batched identity codegen (accumulate results, and then process an output)" - {
-
     /** To achieve this, we need to first replicate how HashAggregateExec works, as that particular plan is one that loads everything into memory first, before emitting results */
     withVariousInputs[(Double, Double)](
       _.config(CODEGEN_FALLBACK.key, value = false)
@@ -78,9 +77,10 @@ final class CodegenEscapeSpec extends AnyFreeSpec with BeforeAndAfter with Spark
   }
 
   implicit class RichDataSet[T](val dataSet: Dataset[T]) {
-    def debugSqlHere: Dataset[T] = {
-      info(dataSet.queryExecution.executedPlan.toString())
-      dataSet
+    def debugSqlHere[V](f: Dataset[T] => V): V = {
+      withClue(dataSet.queryExecution.executedPlan.toString()) {
+        f(dataSet)
+      }
     }
   }
 
@@ -96,8 +96,9 @@ final class CodegenEscapeSpec extends AnyFreeSpec with BeforeAndAfter with Spark
     } s"In ${title}" in withSparkSession2(configuration) { sparkSession =>
       import sparkSession.implicits._
       fr(sparkSession)
-      val ds = sparkSession.sql(sql).debugSqlHere.as[T]
-      f(ds.collect().toList)
+      sparkSession.sql(sql).debugSqlHere { ds =>
+        f(ds.as[T].collect().toList)
+      }
     }
   }
 

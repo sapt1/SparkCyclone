@@ -26,7 +26,6 @@ object DynamicCSqlExpressionEvaluationSpec {
         List(TransferDefinitions.TransferDefinitionsSourceCode, code)
           .mkString("\n\n")
       )
-      System.err.println(s"Generated: ${cLib.toAbsolutePath.toString}")
       new CArrowNativeInterfaceNumeric(cLib.toAbsolutePath.toString)
     }
   }
@@ -61,7 +60,9 @@ final class DynamicCSqlExpressionEvaluationSpec
       s"(n${idx}) ${sql}" in withSparkSession2(configuration) { sparkSession =>
         SampleSource.CSV.generate(sparkSession, SanityCheckSize)
         import sparkSession.implicits._
-        assert(sparkSession.sql(sql).debugSqlHere.as[Double].collect().toList == List(expectation))
+        sparkSession.sql(sql).debugSqlHere { ds =>
+          assert(ds.as[Double].collect().toList == List(expectation))
+        }
       }
     }
   }
@@ -70,22 +71,18 @@ final class DynamicCSqlExpressionEvaluationSpec
   "Support pairwise addition" in withSparkSession2(configuration) { sparkSession =>
     makeCsvNumsMultiColumn(sparkSession)
     import sparkSession.implicits._
-    assert(
-      sparkSession.sql(sql_pairwise).debugSqlHere.as[(Double)].collect().toList == List(
-        3,
-        5,
-        7,
-        9,
-        58
-      )
-    )
+    sparkSession.sql(sql_pairwise).debugSqlHere { ds =>
+      assert(ds.as[(Double)].collect().toList == List(3, 5, 7, 9, 58))
+    }
   }
 
   val sql_mci = s"SELECT SUM(${SampleColA} + ${SampleColB}) FROM nums"
   "Support multi-column inputs" in withSparkSession2(configuration) { sparkSession =>
     makeCsvNumsMultiColumn(sparkSession)
     import sparkSession.implicits._
-    assert(sparkSession.sql(sql_mci).debugSqlHere.as[(Double)].collect().toList == List(82.0))
+    sparkSession.sql(sql_mci).debugSqlHere { ds =>
+      assert(ds.as[(Double)].collect().toList == List(82.0))
+    }
   }
 
   val sql_mci_2 = s"SELECT SUM(${SampleColB} - ${SampleColA}) FROM nums"
@@ -93,7 +90,9 @@ final class DynamicCSqlExpressionEvaluationSpec
     sparkSession =>
       makeCsvNumsMultiColumn(sparkSession)
       import sparkSession.implicits._
-      assert(sparkSession.sql(sql_mci_2).debugSqlHere.as[Double].collect().toList == List(-42.0))
+      sparkSession.sql(sql_mci_2).debugSqlHere { ds =>
+        assert(ds.as[Double].collect().toList == List(-42.0))
+      }
   }
 
   val sql_mcio =
@@ -101,11 +100,10 @@ final class DynamicCSqlExpressionEvaluationSpec
   "Support multi-column inputs and outputs" in withSparkSession2(configuration) { sparkSession =>
     makeCsvNumsMultiColumn(sparkSession)
     import sparkSession.implicits._
-    assert(
-      sparkSession.sql(sql_mcio).debugSqlHere.as[(Double, Double)].collect().toList == List(
-        -42.0 -> 82.0
-      )
-    )
+
+    sparkSession.sql(sql_mcio).debugSqlHere { ds =>
+      assert(ds.as[(Double, Double)].collect().toList == List(-42.0 -> 82.0))
+    }
   }
 
   "Different multi-column expressions can be evaluated" - {
@@ -113,11 +111,10 @@ final class DynamicCSqlExpressionEvaluationSpec
     s"Multi-column: ${sql1}" in withSparkSession2(configuration) { sparkSession =>
       SampleSource.CSV.generate(sparkSession, SanityCheckSize)
       import sparkSession.implicits._
-      assert(
-        sparkSession.sql(sql1).debugSqlHere.as[(Double, Double)].collect().toList == List(
-          24.8 -> 62.0
-        )
-      )
+
+      sparkSession.sql(sql1).debugSqlHere { ds =>
+        assert(ds.as[(Double, Double)].collect().toList == List(24.8 -> 62.0))
+      }
     }
 
     val sql2 =
@@ -126,16 +123,18 @@ final class DynamicCSqlExpressionEvaluationSpec
     s"Group by is possible with ${sql2}" ignore withSparkSession2(configuration) { sparkSession =>
       SampleSource.CSV.generate(sparkSession, SanityCheckSize)
       import sparkSession.implicits._
-      assert(
-        sparkSession.sql(sql2).debugSqlHere.as[(Double, Double, Double)].collect().toList == Nil
-      )
+
+      sparkSession.sql(sql2).debugSqlHere { ds =>
+        assert(ds.as[(Double, Double, Double)].collect().toList == Nil)
+      }
     }
   }
 
   implicit class RichDataSet[T](val dataSet: Dataset[T]) {
-    def debugSqlHere: Dataset[T] = {
-      info(dataSet.queryExecution.executedPlan.toString())
-      dataSet
+    def debugSqlHere[V](f: Dataset[T] => V): V = {
+      withClue(dataSet.queryExecution.executedPlan.toString()) {
+        f(dataSet)
+      }
     }
   }
 
