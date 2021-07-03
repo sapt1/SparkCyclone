@@ -18,12 +18,38 @@ import org.apache.spark.sql.internal.StaticSQLConf.CODEGEN_COMMENTS
 
 object BenchTestingPossibilities {
 
+  sealed trait VeColumnMode {
+    final override def toString: String = label
+    def offHeapEnabled: Boolean
+    def compressed: Boolean
+    def label: String
+  }
+  object VeColumnMode {
+    val All = List(OffHeapDisabled, OffHeapEnabledUnCompressed, OffHeapEnabledCompressed)
+    case object OffHeapDisabled extends VeColumnMode {
+      def offHeapEnabled: Boolean = false
+      def compressed: Boolean = false
+      def label: String = "OffHeapDisabled"
+    }
+    case object OffHeapEnabledUnCompressed extends VeColumnMode {
+      def offHeapEnabled: Boolean = true
+      def compressed: Boolean = false
+      def label: String = "OffHeapEnabledUncompressed"
+    }
+    case object OffHeapEnabledCompressed extends VeColumnMode {
+      def offHeapEnabled: Boolean = true
+      def compressed: Boolean = true
+      def label: String = "OffHeapEnabledCompressed"
+    }
+  }
+
   import com.eed3si9n.expecty.Expecty.assert
   final case class SimpleSql(
     sql: String,
     expectedResult: (Double, Double),
     source: SampleSource,
-    testingTarget: TestingTarget
+    testingTarget: TestingTarget,
+    offHeapMode: Option[VeColumnMode]
   ) extends Testing {
     override def benchmark(sparkSession: SparkSession): Unit = {
       val dataframe = sparkSession.sql(sql)
@@ -73,8 +99,14 @@ object BenchTestingPossibilities {
             .config(CODEGEN_COMMENTS.key, value = true)
             .config(key = "spark.plugins", value = classOf[AuroraSqlPlugin].getCanonicalName)
             .config(key = "spark.ui.enabled", value = false)
-            .config(key = "spark.sql.columnVector.offheap.enabled", value = "true")
-            .config(key = "spark.sql.inMemoryColumnarStorage.compressed", value = "false")
+            .config(
+              key = "spark.sql.columnVector.offheap.enabled",
+              value = offHeapMode.get.offHeapEnabled.toString
+            )
+            .config(
+              key = "spark.sql.inMemoryColumnarStorage.compressed",
+              value = offHeapMode.get.compressed.toString()
+            )
             .config(sparkConf)
             .getOrCreate()
         case TestingTarget.PlainSpark =>
@@ -121,11 +153,15 @@ object BenchTestingPossibilities {
           TestingTarget.Rapids,
           TestingTarget.CMake
         )
+        colMode <-
+          if (testingTarget == TestingTarget.VectorEngine) VeColumnMode.All.map(v => Some(v))
+          else List(None)
       } yield SimpleSql(
         sql = s"SELECT SUM(${SampleColA}), AVG(${SampleColB}) FROM nums",
         expectedResult = (62, 4),
         source = source,
-        testingTarget = testingTarget
+        testingTarget = testingTarget,
+        offHeapMode = colMode
       ),
       JoinPlanSpec.OurTesting
     ).flatten
