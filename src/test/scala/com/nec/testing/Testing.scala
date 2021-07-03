@@ -30,7 +30,7 @@ object Testing {
   object TestingTarget {
     case object Rapids extends TestingTarget {
       def label: String = "Rapids"
-      override def expectedString: Option[String] = Some("GPU")
+      override def expectedString: Option[String] = Some("Gpu")
     }
     case object VectorEngine extends TestingTarget {
       def label: String = "VE"
