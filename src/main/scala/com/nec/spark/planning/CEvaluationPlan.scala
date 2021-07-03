@@ -156,16 +156,11 @@ final case class CEvaluationPlan(
 
   private def executeColumnWise(): RDD[InternalRow] = {
     val evaluator = nativeEvaluator.forCode(lines.lines.mkString("\n", "\n", "\n"))
-    var printed = false
     child
       .executeColumnar()
       .mapPartitions { columnarBatches =>
         columnarBatches
           .map { columnarBatch =>
-            if (!printed) {
-              println(s"Columnar batch child type ==> ${columnarBatch.column(0).getClass}")
-              printed = true
-            }
             val timeZoneId = conf.sessionLocalTimeZone
             val allocator = ArrowUtilsExposed.rootAllocator.newChildAllocator(
               s"writer for word count",
