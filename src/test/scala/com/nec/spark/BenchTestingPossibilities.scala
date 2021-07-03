@@ -23,6 +23,7 @@ object BenchTestingPossibilities {
   ) extends Testing {
     override def benchmark(sparkSession: SparkSession): Unit = {
       val result = sparkSession.sql(sql)
+      println(s"Plan for: ${name}")
       println(result.queryExecution.executedPlan)
       result.collect()
     }
@@ -86,7 +87,10 @@ object BenchTestingPossibilities {
     override def cleanUp(sparkSession: SparkSession): Unit = sparkSession.close()
     override def verify(sparkSession: SparkSession): Unit = {
       import sparkSession.implicits._
-      sparkSession.sql(sql).as[Double].collect().toList == List(expectedResult)
+      println(s"Plan for: ${name}")
+      val ds = sparkSession.sql(sql).as[Double]
+      println(ds.queryExecution.executedPlan)
+      ds.collect().toList == List(expectedResult)
     }
   }
 
