@@ -1,12 +1,14 @@
 package com.nec.spark
 
-import com.nec.cmake.DynamicCSqlExpressionEvaluationSpec.cNativeEvaluator
+import com.nec.cmake.DynamicCSqlExpressionEvaluationSpec.CNativeEvaluator
 import com.nec.spark.BenchTestingPossibilities.BenchTestAdditions
 import com.nec.spark.planning.VERewriteStrategy
 import org.apache.spark.sql.SparkSession
 import org.scalatest.freespec.AnyFreeSpec
 import com.nec.spark.planning.simplesum.JoinPlanSpec
 import com.nec.testing.SampleSource
+import com.nec.testing.SampleSource.SampleColA
+import com.nec.testing.SampleSource.SampleColB
 import com.nec.testing.Testing
 import com.nec.testing.Testing.DataSize
 import com.nec.testing.Testing.TestingTarget
@@ -16,17 +18,36 @@ import org.apache.spark.sql.internal.StaticSQLConf.CODEGEN_COMMENTS
 
 object BenchTestingPossibilities {
 
+  import com.eed3si9n.expecty.Expecty.assert
   final case class SimpleSql(
     sql: String,
-    expectedResult: Double,
+    expectedResult: (Double, Double),
     source: SampleSource,
     testingTarget: TestingTarget
   ) extends Testing {
     override def benchmark(sparkSession: SparkSession): Unit = {
-      val result = sparkSession.sql(sql)
-      println(s"Plan for: ${name}")
-      println(result.queryExecution.executedPlan)
-      result.collect()
+      val dataframe = sparkSession.sql(sql)
+      testingTarget.expectedString.foreach { str =>
+        assert(
+          dataframe.queryExecution.executedPlan.toString().contains(str),
+          "Expected the plan to match the testing target"
+        )
+      }
+      val result = dataframe.collect()
+      assert(result.nonEmpty, "Expected result to be non-empty")
+      println(s"Peek result ==> ${result.head}")
+    }
+    override def verify(sparkSession: SparkSession): Unit = {
+      import sparkSession.implicits._
+      val dataset = sparkSession.sql(sql).as[(Double, Double)]
+      val message = s"Query was: '${sql}', on $name"
+      testingTarget.expectedString.foreach { str =>
+        assert(
+          dataset.queryExecution.executedPlan.toString().contains(str),
+          "Expected the plan to match the testing target"
+        )
+      }
+      assert(dataset.collect().toList == List(expectedResult), message)
     }
     override def prepareSession(dataSize: DataSize): SparkSession = {
       val sparkConf = new SparkConf(loadDefaults = true)
@@ -72,7 +93,7 @@ object BenchTestingPossibilities {
             .appName(name.value)
             .withExtensions(sse =>
               sse.injectPlannerStrategy(sparkSession =>
-                new VERewriteStrategy(sparkSession, cNativeEvaluator)
+                new VERewriteStrategy(sparkSession, CNativeEvaluator)
               )
             )
             .config(CODEGEN_FALLBACK.key, value = false)
@@ -88,13 +109,6 @@ object BenchTestingPossibilities {
     }
 
     override def cleanUp(sparkSession: SparkSession): Unit = sparkSession.close()
-    override def verify(sparkSession: SparkSession): Unit = {
-      import sparkSession.implicits._
-      println(s"Plan for: ${name}")
-      val ds = sparkSession.sql(sql).as[Double]
-      println(ds.queryExecution.executedPlan)
-      ds.collect().toList == List(expectedResult)
-    }
   }
 
   val possibilities: List[Testing] =
@@ -108,8 +122,8 @@ object BenchTestingPossibilities {
           TestingTarget.CMake
         )
       } yield SimpleSql(
-        sql = s"SELECT SUM(value) FROM nums",
-        expectedResult = 123,
+        sql = s"SELECT SUM(${SampleColA}), AVG(${SampleColB}) FROM nums",
+        expectedResult = (62, 4),
         source = source,
         testingTarget = testingTarget
       ),

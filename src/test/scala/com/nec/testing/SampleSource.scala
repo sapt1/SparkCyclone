@@ -1,7 +1,5 @@
 package com.nec.testing
 
-import com.nec.spark.SampleTestData.LargeCSV
-import com.nec.spark.SampleTestData.LargeParquet
 import com.nec.spark.SampleTestData.SampleCSV
 import com.nec.spark.SampleTestData.SampleMultiColumnCSV
 import com.nec.spark.SampleTestData.SampleTwoColumnParquet
@@ -12,6 +10,9 @@ import com.nec.testing.Testing.DataSize
 import org.apache.spark.sql.types.DoubleType
 import org.apache.spark.sql.types.StructField
 import org.apache.spark.sql.types.StructType
+
+import java.nio.file.Path
+import java.nio.file.Paths
 
 sealed trait SampleSource extends Serializable {
   def title: String
@@ -25,7 +26,7 @@ object SampleSource {
     override def generate(sparkSession: SparkSession, size: DataSize): Unit = {
       size match {
         case BenchmarkSize   => makeCsvNumsLarge(sparkSession)
-        case SanityCheckSize => makeCsvNums(sparkSession)
+        case SanityCheckSize => makeCsvNumsMultiColumn(sparkSession)
       }
     }
 
@@ -51,50 +52,56 @@ object SampleSource {
 
   val All: List[SampleSource] = List(CSV, Parquet, InMemory)
 
-
   val SharedName = "nums"
+
+  final case class SampleRow(ColA: Double, ColB: Double)
 
   def makeMemoryNums(sparkSession: SparkSession): Unit = {
     import sparkSession.implicits._
-    Seq(1d, 2d, 3d, 4d, 52d)
+    Seq[SampleRow](
+      SampleRow(1, 2),
+      SampleRow(2, -1),
+      SampleRow(3, 1),
+      SampleRow(4, -4),
+      SampleRow(52, 11)
+    )
       .toDS()
       .createOrReplaceTempView(SharedName)
   }
 
-  def makeCsvNums(sparkSession: SparkSession): Unit = {
-    import sparkSession.implicits._
-    val schema = StructType(Array(StructField("a", DoubleType)))
-
-    sparkSession.read
-      .format("csv")
-      .schema(schema)
-      .load(SampleCSV.toString)
-      .withColumnRenamed("a", "value")
-      .as[Double]
-      .createOrReplaceTempView(SharedName)
-  }
+  val SampleColA = "ColA"
+  val SampleColB = "ColB"
 
   def makeCsvNumsMultiColumn(sparkSession: SparkSession): Unit = {
     import sparkSession.implicits._
-    val schema = StructType(Array(StructField("a", DoubleType), StructField("b", DoubleType)))
+    val schema = StructType(
+      Array(StructField(SampleColA, DoubleType), StructField(SampleColB, DoubleType))
+    )
 
     sparkSession.read
       .format("csv")
       .schema(schema)
       .load(SampleMultiColumnCSV.toString)
-      .as[(Double, Double)]
       .createOrReplaceTempView(SharedName)
   }
 
+  lazy val LargeCSV: Path =
+    Paths.get("/home/dominik/large-sample-csv-10_9/")
+
   def makeCsvNumsLarge(sparkSession: SparkSession): Unit = {
     import sparkSession.implicits._
-    val schema = StructType(Array(StructField("a", DoubleType), StructField("b", DoubleType), StructField("c", DoubleType)))
+    val schema = StructType(
+      Array(
+        StructField(SampleColA, DoubleType),
+        StructField(SampleColB, DoubleType),
+        StructField("c", DoubleType)
+      )
+    )
 
     sparkSession.read
       .format("csv")
       .schema(schema)
       .load(LargeCSV.toString)
-      .withColumnRenamed("a", "value")
       .createOrReplaceTempView(SharedName)
   }
 
@@ -104,10 +111,13 @@ object SampleSource {
     sparkSession.read
       .format("parquet")
       .load(SampleTwoColumnParquet.toString)
-      .withColumnRenamed("a", "value")
-      .as[(Double, Double)]
+      .withColumnRenamed("a", SampleColA)
+      .withColumnRenamed("b", SampleColB)
       .createOrReplaceTempView(SharedName)
   }
+
+  lazy val LargeParquet: Path =
+    Paths.get("/home/william/large-sample-parquet-10_9/")
 
   def makeParquetNumsLarge(sparkSession: SparkSession): Unit = {
     import sparkSession.implicits._
@@ -115,7 +125,8 @@ object SampleSource {
     sparkSession.read
       .format("parquet")
       .load(LargeParquet.toString)
-      .withColumnRenamed("a", "value")
+      .withColumnRenamed("a", SampleColA)
+      .withColumnRenamed("b", SampleColB)
       .createOrReplaceTempView(SharedName)
   }
 }

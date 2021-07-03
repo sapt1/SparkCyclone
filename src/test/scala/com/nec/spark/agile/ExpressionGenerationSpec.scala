@@ -22,6 +22,7 @@ import org.scalatest.BeforeAndAfter
 import org.scalatest.freespec.AnyFreeSpec
 import com.nec.spark.agile.CExpressionEvaluation._
 import com.nec.testing.SampleSource
+import com.nec.testing.SampleSource.SampleColA
 import com.nec.testing.Testing.DataSize.SanityCheckSize
 object ExpressionGenerationSpec {}
 
@@ -163,11 +164,11 @@ final class ExpressionGenerationSpec extends AnyFreeSpec with BeforeAndAfter wit
 
   "Different expressions are found" - {
     List(
-      "SELECT SUM(value) FROM nums",
-      "SELECT SUM(value - 1) FROM nums",
-      "SELECT AVG(2 * value) FROM nums",
-      "SELECT AVG(2 * value), SUM(value) FROM nums",
-      "SELECT AVG(2 * value), SUM(value - 1), value / 2 FROM nums GROUP BY (value / 2)"
+      s"SELECT SUM(${SampleColA}) FROM nums",
+      s"SELECT SUM(${SampleColA} - 1) FROM nums",
+      s"SELECT AVG(2 * ${SampleColA}) FROM nums",
+      s"SELECT AVG(2 * ${SampleColA}), SUM(${SampleColA}) FROM nums",
+      s"SELECT AVG(2 * ${SampleColA}), SUM(${SampleColA} - 1), ${SampleColA} / 2 FROM nums GROUP BY (${SampleColA} / 2)"
     ).take(2).foreach { sql =>
       s"$sql" in withSparkSession2(
         _.config(CODEGEN_FALLBACK.key, value = false)

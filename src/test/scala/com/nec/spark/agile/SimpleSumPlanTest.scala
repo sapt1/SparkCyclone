@@ -15,6 +15,7 @@ import org.scalatest.freespec.AnyFreeSpec
 import com.eed3si9n.expecty.Expecty.assert
 import com.nec.spark.planning.simplesum.SimpleSumPlan
 import com.nec.testing.SampleSource
+import com.nec.testing.SampleSource.SampleColA
 import com.nec.testing.Testing
 import com.nec.testing.Testing.TestingTarget
 
@@ -90,7 +91,7 @@ object SimpleSumPlanTest {
     for {
       sumMethod <- PureJvmBasedModes
       source <- SampleSource.All
-      sql = "SELECT SUM(value) FROM nums"
+      sql = s"SELECT SUM(${SampleColA}) FROM nums"
     } yield SimpleSumTesting(sumMethod, source, sql)
   }
 }
