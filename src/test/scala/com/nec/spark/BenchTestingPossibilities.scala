@@ -52,6 +52,7 @@ object BenchTestingPossibilities {
             .config(key = "spark.plugins", value = classOf[AuroraSqlPlugin].getCanonicalName)
             .config(key = "spark.ui.enabled", value = false)
             .config(key = "spark.sql.columnVector.offheap.enabled", value = "true")
+            .config(key = "spark.sql.inMemoryColumnarStorage.compressed", value = "false")
             .config(sparkConf)
             .getOrCreate()
         case TestingTarget.PlainSpark =>
