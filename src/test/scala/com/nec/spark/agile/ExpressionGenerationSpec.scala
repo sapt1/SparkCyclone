@@ -196,7 +196,9 @@ final class ExpressionGenerationSpec extends AnyFreeSpec with BeforeAndAfter wit
       ) { sparkSession =>
         SampleSource.CSV.generate(sparkSession, SanityCheckSize)
         import sparkSession.implicits._
-        sparkSession.sql(sql).debugSqlHere
+        sparkSession.sql(sql).debugSqlHere { ds =>
+          ds.collect()
+        }
       }
     }
   }
@@ -329,9 +331,10 @@ final class ExpressionGenerationSpec extends AnyFreeSpec with BeforeAndAfter wit
   }
 
   implicit class RichDataSet[T](val dataSet: Dataset[T]) {
-    def debugSqlHere: Dataset[T] = {
-      info(dataSet.queryExecution.executedPlan.toString())
-      dataSet
+    def debugSqlHere[V](f: Dataset[T] => V): V = {
+      withClue(dataSet.queryExecution.executedPlan.toString()) {
+        f(dataSet)
+      }
     }
   }
 
