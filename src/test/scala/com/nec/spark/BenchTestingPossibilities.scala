@@ -78,6 +78,7 @@ object BenchTestingPossibilities {
     override def prepareSession(dataSize: DataSize): SparkSession = {
       val sparkConf = new SparkConf(loadDefaults = true)
         .set("nec.testing.target", testingTarget.label)
+        .set("nec.testing.testing", this.toString)
       val sess = testingTarget match {
         case TestingTarget.Rapids =>
           SparkSession
@@ -140,8 +141,6 @@ object BenchTestingPossibilities {
 
       sess
     }
-
-    override def cleanUp(sparkSession: SparkSession): Unit = sparkSession.close()
   }
 
   val possibilities: List[Testing] =
