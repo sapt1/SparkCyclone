@@ -15,6 +15,14 @@ import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.vectorized.ColumnarBatch
 
 object SparkPortingUtils {
+  case class ResourceId(resourceName: String)
+  case class ResourceRequest(id: ResourceId, amount: Int)
+  object ScanOperation {
+    def unapply(logicalPlan: LogicalPlan): Option[(Seq[NamedExpression], Expression, LogicalRelation)] = {
+      println(logicalPlan.toString())
+      None
+    }
+  }
 
   implicit class PortedSparkPlan(sparkPlan: SparkPlan) {
     def supportsColumnar: Boolean = false
