@@ -115,12 +115,16 @@ object CExpressionEvaluation {
             s"${outputCount}->data = (double *)malloc(1 * sizeof(double));",
             s"${outputCount}->count = 1;",
             s"double ${cleanName}_accumulated = 0;",
-            s"int ${cleanName}_counted = 0;"
+            s"int ${cleanName}_counted = 0;",
+            s"""printf("HERE");"""
+
           ),
           iter = List(
             s"${cleanName}_accumulated += ${evaluateSub(inputs, sub)};",
             s"${cleanName}_counted += 1;",
-            s"""printf("%f", ${evaluateSub(inputs, sub)});"""
+            s"""printf("%f", ${evaluateSub(inputs, sub)});""",
+            s"""printf(i);"""
+
           ),
           result = List(
             s"${outputSum}->data[0] = ${cleanName}_accumulated;",
