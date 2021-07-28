@@ -123,7 +123,7 @@ object CExpressionEvaluation {
             s"${cleanName}_accumulated += ${evaluateSub(inputs, sub)};",
             s"${cleanName}_counted += 1;",
             s"""printf("%f", ${evaluateSub(inputs, sub)});""",
-            s"""printf(i);"""
+            s"""printf("%d", i);"""
 
           ),
           result = List(
