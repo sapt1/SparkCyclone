@@ -128,6 +128,7 @@ object NativeCsvExec {
     portableDataStream: PortableDataStream
   ): InputStream = {
     val original = portableDataStream.open()
+    println("HADOOP CONF:" + hadoopConfiguration.value)
     val theCodec =
       new CompressionCodecFactory(hadoopConfiguration.value).getCodec(new Path(name))
 
@@ -198,7 +199,7 @@ case class NativeCsvExec(
     val evaluator = nativeEvaluator.forCode(CsvParse.CsvParseCode)
     val imfi = hadoopRelation.location.asInstanceOf[InMemoryFileIndex]
     val hadoopConf = new SerializableConfiguration(sparkContext.hadoopConfiguration)
-    println(hadoopConf.value)
+
     sparkContext
       .binaryFiles(imfi.rootPaths.head.toString)
       .map { case (name, pds) =>
