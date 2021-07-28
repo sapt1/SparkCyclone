@@ -128,7 +128,6 @@ object NativeCsvExec {
     portableDataStream: PortableDataStream
   ): InputStream = {
     val original = portableDataStream.open()
-    println("HADOOP CONF:" + hadoopConfiguration.conf)
     val theCodec =
       new CompressionCodecFactory(hadoopConfiguration.conf).getCodec(new Path(name))
 
