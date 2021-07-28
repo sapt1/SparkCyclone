@@ -15,36 +15,6 @@ import org.apache.spark.sql.execution.datasources.LogicalRelation
 import org.apache.spark.sql.vectorized.ColumnarBatch
 
 object SparkPortingUtils {
-  class SerializableConfiguration(@transient var value: Configuration) extends Serializable {
-    def tryOrIOException[T](block: => T): T = {
-      try {
-        block
-      } catch {
-        case e: IOException =>
-          throw e
-        case NonFatal(e) =>
-          throw new IOException(e)
-      }
-    }
-
-      def writeObject(out: ObjectOutputStream): Unit = tryOrIOException {
-      out.defaultWriteObject()
-      value.write(out)
-    }
-
-      def readObject(in: ObjectInputStream): Unit = tryOrIOException {
-      value = new Configuration(false)
-      value.readFields(in)
-    }
-  }
-  case class ResourceId(resourceName: String)
-  case class ResourceRequest(id: ResourceId, amount: Int)
-  object ScanOperation {
-    def unapply(logicalPlan: LogicalPlan): Option[(Seq[NamedExpression], Expression, LogicalRelation)] = {
-      println(logicalPlan.toString())
-      None
-    }
-  }
 
   implicit class PortedSparkPlan(sparkPlan: SparkPlan) {
     def supportsColumnar: Boolean = false
