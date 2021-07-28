@@ -117,10 +117,11 @@ final case class CEvaluationPlan(
             } finally {
               inputVectors.foreach(_.close())
             }
-            val row = new UnsafeRow(outputVectors.size)
-            val holder = new BufferHolder(row)
-            val writer = new UnsafeRowWriter(holder, outputVectors.size)
+
             (0 until outputVectors.head.getValueCount).iterator.map { v_idx =>
+              val row = new UnsafeRow(outputVectors.size)
+              val holder = new BufferHolder(row)
+              val writer = new UnsafeRowWriter(holder, outputVectors.size)
               holder.reset()
               outputVectors.zipWithIndex.foreach { case (v, c_idx) =>
                 val doubleV = v.get(v_idx)
