@@ -53,8 +53,9 @@ final case class VERewriteStrategy(sparkSession: SparkSession, nativeEvaluator: 
     if (VERewriteStrategy._enabled) {
       plan match {
         case logical.Project(resultExpressions, child) if !resultExpressions.forall {
-              /** If it's just a rename, don't send to VE * */
+              /** If it's just a rename or plain select, don't send to VE * */
               case a: Alias if a.child.isInstanceOf[Attribute] => true
+              case a: AttributeReference                       => true
               case _                                           => false
             } =>
           implicit val nameCleaner: NameCleaner = NameCleaner.verbose
