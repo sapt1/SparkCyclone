@@ -21,6 +21,12 @@ import org.apache.spark.sql.{Dataset, SparkSession}
 object DynamicVeSqlExpressionEvaluationSpec {
 
   def configuration: SparkSession.Builder => SparkSession.Builder = {
+    net.bytebuddy.agent.ByteBuddyAgent.install()
+    import com.nec.agent._
+    ExecutorAttachmentBuilder
+      .using(AttachExecutorLifecycle.ServiceBasedExecutorLifecycle)
+      .installOnByteBuddyAgent()
+
     _.config(CODEGEN_FALLBACK.key, value = false)
       .config("spark.sql.codegen.comments", value = true)
       .config("spark.plugins", classOf[AuroraSqlPlugin].getCanonicalName)
@@ -39,6 +45,7 @@ final class DynamicVeSqlExpressionEvaluationSpec
     Aurora4SparkExecutorPlugin.closeProcAndCtx()
   }
   override protected def beforeAll(): Unit = {
+
     Aurora4SparkExecutorPlugin._veo_proc = Aurora.veo_proc_create(-1)
     super.beforeAll()
   }
