@@ -7,11 +7,10 @@ import org.apache.arrow.vector.{Float8Vector, VectorSchemaRoot}
 
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
-import org.apache.spark.sql.catalyst.expressions.codegen.UnsafeRowWriter
-import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, NamedExpression}
+import org.apache.spark.sql.catalyst.expressions.codegen.{BufferHolder, UnsafeRowWriter}
+import org.apache.spark.sql.catalyst.expressions.{Attribute, NamedExpression, UnsafeRow}
 import org.apache.spark.sql.execution.arrow.ArrowWriter
-import org.apache.spark.sql.execution.{ColumnarToRowTransition, SparkPlan, UnaryExecNode}
+import org.apache.spark.sql.execution.{SparkPlan, UnaryExecNode}
 import org.apache.spark.sql.util.ArrowUtilsExposed
 
 case class SimpleSortPlan( fName: String,
@@ -44,7 +43,7 @@ case class SimpleSortPlan( fName: String,
             arrowWriter.finish()
 
             val inputVectors = output.zipWithIndex.map { case (attr, idx) =>
-              root.getVector(idx)
+              root.getFieldVectors.get(idx)
             }
             arrowWriter.finish()
 
@@ -67,16 +66,21 @@ case class SimpleSortPlan( fName: String,
             } finally {
               inputVectors.foreach(_.close())
             }
+          //TODO: This may not work. TBV
             (0 until outputVectors.head.getValueCount).iterator.map { v_idx =>
-              val writer = new UnsafeRowWriter(outputVectors.size)
-              writer.reset()
+              val row = new UnsafeRow(resultExpressions.size)
+              val holder = new BufferHolder(row)
+              val writer = new UnsafeRowWriter(holder, resultExpressions.size)
+              holder.reset()
               outputVectors.zipWithIndex.foreach { case (v, c_idx) =>
                 if (v_idx < v.getValueCount()) {
-                  val doubleV = v.getValueAsDouble(v_idx)
+                  holder.reset()
+                  val doubleV = v.get(v_idx)
                   writer.write(c_idx, doubleV)
                 }
               }
-              writer.getRow
+              row.setTotalSize(holder.totalSize())
+              row
             }
 
           }

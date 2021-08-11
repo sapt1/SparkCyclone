@@ -93,7 +93,7 @@ object VeArrowNativeInterfaceNumeric extends LazyLogging {
   private def make_veo_double_vector(proc: Aurora.veo_proc_handle, float8Vector: Float8Vector)(
     implicit cleanup: Cleanup
   ): non_null_double_vector = {
-    val keyName = "double_" + float8Vector.getName + "_" + float8Vector.getDataBuffer().capacity()
+    val keyName = "double_" + float8Vector.toString + "_" + float8Vector.getDataBuffer().capacity()
 
     columnCache(proc, keyName) match {
       case None => {
@@ -155,7 +155,7 @@ object VeArrowNativeInterfaceNumeric extends LazyLogging {
   private def make_veo_int2_vector(proc: Aurora.veo_proc_handle, intVector: IntVector)(implicit
     cleanup: Cleanup
   ): non_null_int2_vector = {
-    val keyName = "int2_" + intVector.getName + "_" + intVector.getDataBuffer().capacity()
+    val keyName = "int2_" + intVector.toString + "_" + intVector.getDataBuffer().capacity()
 
     columnCache(proc, keyName) match {
       case None => {
@@ -181,7 +181,7 @@ object VeArrowNativeInterfaceNumeric extends LazyLogging {
   private def make_veo_varchar_vector(proc: Aurora.veo_proc_handle, varcharVector: VarCharVector)(implicit
     cleanup: Cleanup
   ): non_null_varchar_vector = {
-    val keyName = "varchar_" + varcharVector.getName + "_" + varcharVector.getDataBuffer().capacity()
+    val keyName = "varchar_" + varcharVector.toString + "_" + varcharVector.getDataBuffer().capacity()
 
     columnCache(proc, keyName) match {
       case None => {
@@ -207,7 +207,7 @@ object VeArrowNativeInterfaceNumeric extends LazyLogging {
   private def make_veo_bigint_vector(proc: Aurora.veo_proc_handle, bigintVector: BigIntVector)(implicit
     cleanup: Cleanup
   ): non_null_bigint_vector = {
-    val keyName = "biging_" + bigintVector.getName + "_" + bigintVector.getDataBuffer().capacity()
+    val keyName = "biging_" + bigintVector.toString + "_" + bigintVector.getDataBuffer().capacity()
 
     columnCache(proc, keyName) match {
       case None => {
