@@ -325,35 +325,35 @@ object VeArrowTransfers extends LazyLogging {
     cleanup.add(veoPtrData, dataSize)
   }
 
-  def stringToByteBuffer(str_buf: non_null_c_bounded_string): ByteBuffer = {
+  private def stringToByteBuffer(str_buf: non_null_c_bounded_string): ByteBuffer = {
     val v_bb = str_buf.getPointer.getByteBuffer(0, 12)
     v_bb.putLong(0, str_buf.data)
     v_bb.putInt(8, str_buf.length)
     v_bb
   }
 
-  def nonNullDoubleVectorToByteBuffer(double_vector: non_null_double_vector): ByteBuffer = {
+  private def nonNullDoubleVectorToByteBuffer(double_vector: non_null_double_vector): ByteBuffer = {
     val v_bb = double_vector.getPointer.getByteBuffer(0, 12)
     v_bb.putLong(0, double_vector.data)
     v_bb.putInt(8, double_vector.count)
     v_bb
   }
 
-  def nonNullInt2VectorToByteBuffer(int_vector: non_null_int2_vector): ByteBuffer = {
+  private def nonNullInt2VectorToByteBuffer(int_vector: non_null_int2_vector): ByteBuffer = {
     val v_bb = int_vector.getPointer.getByteBuffer(0, 12)
     v_bb.putLong(0, int_vector.data)
     v_bb.putInt(8, int_vector.count)
     v_bb
   }
 
-  def nonNullBigIntVectorToByteBuffer(bigint_vector: non_null_bigint_vector): ByteBuffer = {
+  private def nonNullBigIntVectorToByteBuffer(bigint_vector: non_null_bigint_vector): ByteBuffer = {
     val v_bb = bigint_vector.getPointer.getByteBuffer(0, 12)
     v_bb.putLong(0, bigint_vector.data)
     v_bb.putInt(8, bigint_vector.count)
     v_bb
   }
 
-  def nonNullVarCharVectorVectorToByteBuffer(
+  private def nonNullVarCharVectorVectorToByteBuffer(
     varchar_vector: non_null_varchar_vector
   ): ByteBuffer = {
     val v_bb = varchar_vector.getPointer.getByteBuffer(0, 24)
