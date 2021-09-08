@@ -26,6 +26,7 @@ final class VeArrowNativeInterface(proc: Aurora.veo_proc_handle, lib: Long)
 object VeArrowNativeInterface extends LazyLogging {
   private var libs: Map[String, Long] = Map()
   private var functionAddrs: Map[(Long, String), Long] = Map()
+  private val bufferCache: LruVeoMemCache = new LruVeoMemCache(500)
 
   def requireOk(result: Int): Unit = {
     require(result >= 0, s"Result should be >=0, got $result")
@@ -80,6 +81,13 @@ object VeArrowNativeInterface extends LazyLogging {
     byteBuffer: ByteBuffer,
     len: Option[Long] = None
   )(implicit cleanup: Cleanup): Long = {
+    val hostPtr = new org.bytedeco.javacpp.Pointer(byteBuffer)
+    val cachedPtr = bufferCache.get(proc, hostPtr.address)
+    logger.info(s"Retrieved cached addresss for $hostPtr: $cachedPtr")
+    if (cachedPtr != 0) {
+        return cachedPtr
+    }
+    logger.info(s"Copying host buffer $hostPtr to VE")
     val veInputPointer = new LongPointer(8)
 
     /** No idea why Arrow in some cases returns a ByteBuffer with 0-capacity, so we have to pass a length explicitly! */
@@ -90,13 +98,14 @@ object VeArrowNativeInterface extends LazyLogging {
         proc,
         /** after allocating, this pointer now contains a value of the VE storage address * */
         veInputPointer.get(),
-        new org.bytedeco.javacpp.Pointer(byteBuffer),
+        hostPtr,
         size
       )
     )
     veInputPointer.get()
     val ptr = veInputPointer.get()
     cleanup.add(ptr, size)
+    bufferCache.put(proc, hostPtr.address, ptr)
     ptr
   }
 
