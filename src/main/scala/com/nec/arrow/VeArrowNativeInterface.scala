@@ -87,6 +87,7 @@ object VeArrowNativeInterface extends LazyLogging {
     if (cachedPtr != 0) {
         return cachedPtr
     }
+val time1 = System.nanoTime()
     logger.info(s"Copying host buffer $hostPtr to VE")
     val veInputPointer = new LongPointer(8)
 
@@ -104,8 +105,10 @@ object VeArrowNativeInterface extends LazyLogging {
     )
     veInputPointer.get()
     val ptr = veInputPointer.get()
-    cleanup.add(ptr, size)
+//    cleanup.add(ptr, size)
     bufferCache.put(proc, hostPtr.address, ptr)
+val time2 = System.nanoTime()
+System.out.println("NANOTIME: " + (time2 - time1));
     ptr
   }
 
@@ -115,6 +118,7 @@ object VeArrowNativeInterface extends LazyLogging {
     functionName: String,
     arguments: List[NativeArgument]
   ): Unit = {
+val time1 = System.nanoTime()
     assert(lib > 0, s"Expected lib to be >0, was $lib")
     val our_args = Aurora.veo_args_alloc()
     implicit val cleanup: Cleanup = new Cleanup()
@@ -165,5 +169,7 @@ object VeArrowNativeInterface extends LazyLogging {
       }
       Aurora.veo_args_free(our_args)
     }
+val time2 = System.nanoTime()
+System.out.println("EXECTIME: " + (time2 - time1))
   }
 }

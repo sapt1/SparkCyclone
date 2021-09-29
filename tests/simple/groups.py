@@ -3,20 +3,21 @@
 from pyspark.sql import SparkSession
 import pyspark.sql.functions as F
 import pyspark.sql.types as T
+import time
 
 from timeit import default_timer as timer
 
 def main():
     app_name = f'groups_benchmark'
     spark = SparkSession.builder.appName(app_name).getOrCreate()
-
+    spark.sparkContext.setLogLevel("DEBUG")
     start_time = timer()
 
     print("Loading data")
 
     csv = (spark
         .read
-        .format("csv")
+        .format("parquet")
         .schema(
             T.StructType(
                 [
@@ -26,7 +27,7 @@ def main():
                 ]
             )
         )
-        .load("data/XY_doubles_R100000_P100_csv")
+        .load("data_parquet/XY_doubles_R100000_P100_parquet")
     )
 
     print("Caching test1 table.")
@@ -65,3 +66,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+#    time.sleep(1000)

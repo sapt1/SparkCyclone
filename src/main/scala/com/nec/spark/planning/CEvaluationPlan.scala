@@ -90,7 +90,8 @@ final case class CEvaluationPlan(
   with UnaryExecNode
   with ColumnarToRowTransition
   with LazyLogging {
-
+System.out.println("NAMES: ")
+inputReferenceNames.foreach { name => System.out.println(name) }
   protected def inputVectorsIds: Seq[Int] = child.output.indices
 
   override def output: Seq[Attribute] = resultExpressions.zipWithIndex.map { case (ne, idx) =>
@@ -255,7 +256,9 @@ final case class CEvaluationPlan(
   private def executeColumnWise(): RDD[InternalRow] = {
     val evaluator = nativeEvaluator.forCode(lines.lines.mkString("\n", "\n", "\n"))
     val maybeBatch = Option(sparkContext.getConf.getInt(batchColumnarBatches, 0)).filter(_ > 1)
-    maybeBatch match {
+System.out.println("INSIDE executeColumnWise")
+val time1 = System.nanoTime()
+    val foo: RDD[InternalRow] = maybeBatch match {
       case Some(batchBatchSize) =>
         child
           .executeColumnar()
@@ -273,10 +276,14 @@ final case class CEvaluationPlan(
           .coalesce(numPartitions = 1, shuffle = true)
           .mapPartitions(unsafeRows => reduceRows(unsafeRows))
     }
+val time2 = System.nanoTime()
+System.out.println("executeColumnWise TIME: " + (time2 - time1))
+foo
   }
 
   private def reduceRows(unsafeRows: Iterator[UnsafeRow]) = {
-    Iterator
+val time1 = System.nanoTime()
+    val foo = Iterator
       .continually {
         val unsafeRowsList = unsafeRows.toList
         val isAggregation =
@@ -338,11 +345,18 @@ final case class CEvaluationPlan(
       }
       .take(1)
       .flatten
+val time2 = System.nanoTime()
+System.out.println("reduceRows TIME: " + (time2 - time1))
+foo
   }
   private def executeColumnarPerBatch(
     evaluator: ArrowNativeInterface,
     columnarBatch: ColumnarBatch*
   ): immutable.IndexedSeq[UnsafeRow] = {
+System.out.println("COLUMNARBATCHES: " + columnarBatch)
+//Thread.dumpStack
+columnarBatch.foreach { cb => val c = cb.column(0); System.out.println(c + " " + org.apache.commons.lang3.builder.ToStringBuilder.reflectionToString(c)); /* val f = c.getClass().getDeclaredField("doubleData"); f.setAccessible(true); System.out.println("COLUMNARBATCH" + f.get(c)) */ }
+val time1 = System.nanoTime()
     val uuid = java.util.UUID.randomUUID()
     logger.debug(s"[$uuid] Starting evaluation of a columnar batch...")
     val batchStartTime = System.currentTimeMillis()
@@ -371,14 +385,20 @@ final case class CEvaluationPlan(
         }
       }
     logger.debug(s"[$uuid] allocated output vectors")
+val time2 = System.nanoTime()
+var time3 : Long = 0
+var time4 : Long = 0
+var time5 : Long = 0
     try {
       val arrowSchema = ArrowUtilsExposed.toArrowSchema(child.schema, timeZoneId)
       logger.debug(
         s"[$uuid] loading input vectors - there are ${columnarBatch.map(_.numRows()).sum} rows of data (${columnarBatch
           .map(_.numRows())})"
       )
+time3 = System.nanoTime()
       val (inputVectorSchemaRoot, inputVectors) =
         ColumnarBatchToArrow.fromBatch(arrowSchema, allocatorIn)(columnarBatch: _*)
+time4 = System.nanoTime()
       logger.debug(s"[$uuid] loaded input vectors.")
       val clearedInputCols: Int = (0 until columnarBatch.head.numCols()).view
         .flatMap { colNo =>
@@ -386,6 +406,7 @@ final case class CEvaluationPlan(
         }
         .collect { case acv: ArrowColumnVector => acv }
         .count(avc => { avc.close(); true })
+time5 = System.nanoTime()
       logger.debug(s"[$uuid] cleared $clearedInputCols input cols.")
       try {
         logger.debug(s"[$uuid] executing the function 'f'.")
@@ -402,6 +423,7 @@ final case class CEvaluationPlan(
         logger.debug(s"[$uuid] cleared input vectors")
       }
     } finally allocatorIn.close()
+val time6 = System.nanoTime()
 
     logger.debug(s"[$uuid] preparing transfer to UnsafeRows...")
     val writer = new UnsafeRowWriter(outputVectors.size)
@@ -439,12 +461,13 @@ final case class CEvaluationPlan(
         outputVectors.foreach(_.close())
         allocatorOut.close()
       }
+val time7 = System.nanoTime()
 
     logger.debug(s"[$uuid] completed transfer.")
     logger.debug(
       s"[$uuid] Evaluation of batch took ${System.currentTimeMillis() - batchStartTime}ms."
     )
-
+System.out.println("executeColumnarPerBatch TIME: " + (time2 - time1) + " " + (time3 - time2) + " " + (time4 - time3) + " " + (time5 - time4) + " " + (time6 - time5) + " " + (time7 - time6))
     result
   }
   override protected def doExecute(): RDD[InternalRow] = {

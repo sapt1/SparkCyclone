@@ -58,7 +58,7 @@ final case class VERewriteStrategy(sparkSession: SparkSession, nativeEvaluator: 
   extends Strategy
   with LazyLogging {
   override def apply(plan: LogicalPlan): Seq[SparkPlan] = {
-    def fName: String = s"eval_${Math.abs(plan.hashCode())}"
+    def fName: String = s"eval_${Math.abs(plan.toString.hashCode())}"
 
     if (VERewriteStrategy._enabled) {
       log.debug(
