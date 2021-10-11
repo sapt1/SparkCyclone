@@ -3,24 +3,28 @@ package com.nec.spark
 import com.nec.arrow.VeArrowNativeInterface
 import com.nec.aurora.Aurora
 import com.nec.aurora.Aurora.veo_proc_handle
-
 import java.util
+
 import scala.collection.JavaConverters.mapAsScalaMapConverter
+
 import com.nec.spark.Aurora4SparkExecutorPlugin._
 import com.typesafe.scalalogging.LazyLogging
+
 import org.apache.spark.api.plugin.ExecutorPlugin
 import org.apache.spark.api.plugin.PluginContext
 import org.apache.spark.internal.Logging
-
 import java.nio.file.Files
 import java.nio.file.Path
+
 import scala.util.Try
+
+import com.codahale.metrics.Counter
 
 object Aurora4SparkExecutorPlugin {
 
   /** For assumption testing purposes only for now */
   var params: Map[String, String] = Map.empty[String, String]
-
+  val timeSpentInVECounter: Counter = new Counter()
   /** For assumption testing purposes only for now */
   private[spark] var launched: Boolean = false
   var _veo_proc: veo_proc_handle = _
@@ -89,6 +93,8 @@ object Aurora4SparkExecutorPlugin {
 class Aurora4SparkExecutorPlugin extends ExecutorPlugin with Logging {
 
   override def init(ctx: PluginContext, extraConf: util.Map[String, String]): Unit = {
+    val metricRegistry = ctx.metricRegistry()
+    metricRegistry.register("timeSpentInVeMilis", timeSpentInVECounter)
     val resources = ctx.resources()
     Aurora4SparkExecutorPlugin.synchronized {
       Aurora4SparkExecutorPlugin.libraryStorage = new DriverFetchingLibraryStorage(ctx)

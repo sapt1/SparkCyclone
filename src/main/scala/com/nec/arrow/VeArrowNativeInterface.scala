@@ -1,14 +1,16 @@
 package com.nec.arrow
 
 import java.nio.ByteBuffer
+
 import com.nec.aurora.Aurora
 import org.bytedeco.javacpp.LongPointer
 import com.nec.arrow.ArrowNativeInterface._
 import com.typesafe.scalalogging.LazyLogging
-
 import java.io.FileNotFoundException
 import java.nio.file.Files
 import java.nio.file.Paths
+
+import com.nec.spark.{Aurora4SparkDriverPlugin, Aurora4SparkExecutorPlugin}
 import com.nec.util.LruVeoMemCache
 
 final class VeArrowNativeInterface(proc: Aurora.veo_proc_handle, lib: Long)
@@ -152,6 +154,7 @@ object VeArrowNativeInterface extends LazyLogging {
       val fnCallResult = new LongPointer(8)
       val callRes = Aurora.veo_call_sync(proc, fnAddr, our_args, fnCallResult)
       val time = System.currentTimeMillis() - startTime
+      Aurora4SparkExecutorPlugin.timeSpentInVECounter.inc(time)
       logger.debug(
         s"[$uuid] Got result from VE call to '$functionName': '$callRes'. Took ${time}ms"
       )

@@ -1,17 +1,17 @@
 package com.nec.spark
 
-import com.nec.native.NativeCompiler
-import com.nec.native.NativeCompiler.CachingNativeCompiler
+import java.nio.file.Files
 
 import scala.collection.JavaConverters.mapAsJavaMapConverter
-import org.apache.spark.SparkContext
-import org.apache.spark.api.plugin.DriverPlugin
-import org.apache.spark.api.plugin.PluginContext
 
-import java.nio.file.Files
+import com.nec.native.NativeCompiler
+import com.nec.native.NativeCompiler.CachingNativeCompiler
 import com.nec.ve.VeKernelCompiler
 import com.typesafe.scalalogging.LazyLogging
 import okio.ByteString
+
+import org.apache.spark.SparkContext
+import org.apache.spark.api.plugin.{DriverPlugin, PluginContext}
 
 object Aurora4SparkDriverPlugin {
   // For assumption testing purposes only for now
