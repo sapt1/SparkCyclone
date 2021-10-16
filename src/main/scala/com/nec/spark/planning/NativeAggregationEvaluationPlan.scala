@@ -101,7 +101,7 @@ final case class NativeAggregationEvaluationPlan(
     val evaluator = nativeEvaluator.forProgram(
       Program(
         code = List(
-          partialFunction.prependTracer.toCodeLines(partialFunctionName),
+          partialFunction.toCodeLines(partialFunctionName),
           finalFunction
             .toCodeLinesNoHeader(finalFunctionName)
         ).reduce(_ ++ _).lines.mkString("\n", "\n", "\n"),
@@ -241,7 +241,7 @@ final case class NativeAggregationEvaluationPlan(
 
     val evaluator = nativeEvaluator.forProgram(
       Program(
-        code = List(cFunction.prependTracer.toCodeLines(functionName))
+        code = List(cFunction.toCodeLines(functionName))
           .reduce(_ ++ _)
           .lines
           .mkString("\n", "\n", "\n"),
@@ -249,9 +249,9 @@ final case class NativeAggregationEvaluationPlan(
       )
     )
 
-    logger.debug(s"Will execute NewCEvaluationPlan for child ${child}; ${child.output}")
-
     val runId = java.time.Instant.now().getEpochSecond
+
+    logger.info(s"[$runId] Will execute NewCEvaluationPlan for child ${child}; ${child.output}")
 
     child
       .execute()
@@ -269,19 +269,22 @@ final case class NativeAggregationEvaluationPlan(
               .asInstanceOf[VarCharVector]
             tracer.setValueCount(1)
             val contextId = Math.abs(UUID.randomUUID().hashCode())
-            tracer.set(0, s"$runId-$contextId".getBytes())
+            val veRunId = s"$runId-$contextId"
+            logger.debug(s"[$veRunId] Doing a mapPartition")
+            tracer.setSafe(0, veRunId.getBytes())
             val inputVectors: List[FieldVector] =
-              tracer :: child.output.indices.map(root.getVector).toList
+              child.output.indices.map(root.getVector).toList
             val outputVectors: List[FieldVector] =
               cFunction.outputs.map(CFunctionGeneration.allocateFrom(_))
 
             try {
 
-              val outputArgs = inputVectors.map(_ => None) ++
-                outputVectors.map(v => Some(SupportedVectorWrapper.wrapOutput(v)))
               val inputArgs = inputVectors.map(iv =>
                 Some(SupportedVectorWrapper.wrapInput(iv))
               ) ++ outputVectors.map(_ => None)
+
+              val outputArgs = inputVectors.map(_ => None) ++
+                outputVectors.map(v => Some(SupportedVectorWrapper.wrapOutput(v)))
 
               evaluator.callFunction(
                 name = functionName,
@@ -323,9 +326,7 @@ final case class NativeAggregationEvaluationPlan(
 object NativeAggregationEvaluationPlan {
   val TracerName = "tracer"
 
-  val TracerDefines: Defines = Defines(
-    Map("TRACER" -> TracerName)
-  )
+  val TracerDefines: Defines = Defines(Map("TRACER" -> TracerName))
 
   sealed trait EvaluationMode extends Serializable
   object EvaluationMode {

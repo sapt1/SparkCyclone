@@ -149,10 +149,11 @@ object CExpressionEvaluation {
 
     def debugHere(implicit fullName: sourcecode.FullName, line: sourcecode.Line): CodeLines =
       CodeLines.from(
-        UdpDebug.conditional
+        UdpDebug
+          .Conditional("TRACER", UdpDebug.conditional)
           .send(
             "utcnanotime().c_str()",
-            s"std::string($TracerName->data, 0, $TracerName->offsets[1])",
+            s"std::string(TRACER->data, 0, TRACER->offsets[1])",
             """" """",
             s""""${fullName.value}#${line.value}"""",
             """" """"
