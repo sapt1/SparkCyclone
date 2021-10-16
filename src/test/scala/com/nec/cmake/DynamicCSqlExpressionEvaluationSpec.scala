@@ -1,18 +1,12 @@
 package com.nec.cmake
 
 import com.eed3si9n.expecty.Expecty.expect
+import com.nec.native.NativeCompiler.Defines
 import com.nec.native.NativeEvaluator.CNativeEvaluator
 import com.nec.spark.SparkAdditions
 import com.nec.spark.planning.{NativeAggregationEvaluationPlan, VERewriteStrategy}
 import com.nec.testing.SampleSource
-import com.nec.testing.SampleSource.{
-  makeCsvNumsMultiColumn,
-  makeCsvNumsMultiColumnJoin,
-  SampleColA,
-  SampleColB,
-  SampleColC,
-  SampleColD
-}
+import com.nec.testing.SampleSource.{SampleColA, SampleColB, SampleColC, SampleColD, makeCsvNumsMultiColumn, makeCsvNumsMultiColumnJoin}
 import com.nec.testing.Testing.DataSize.SanityCheckSize
 import com.typesafe.scalalogging.LazyLogging
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
@@ -21,7 +15,7 @@ import org.scalatest.matchers.must.Matchers
 import org.scalatest.matchers.should.Matchers.convertToAnyShouldWrapper
 import org.apache.spark.sql.internal.SQLConf.CODEGEN_FALLBACK
 import org.apache.spark.sql.{Dataset, SparkSession}
-import org.scalactic.{source, Prettifier}
+import org.scalactic.{Prettifier, source}
 
 object DynamicCSqlExpressionEvaluationSpec {
 
@@ -30,7 +24,7 @@ object DynamicCSqlExpressionEvaluationSpec {
       .config("spark.sql.codegen.comments", value = true)
       .withExtensions(sse =>
         sse.injectPlannerStrategy(sparkSession =>
-          new VERewriteStrategy(CNativeEvaluator(debug = false))
+          new VERewriteStrategy(CNativeEvaluator(Defines.debug))
         )
       )
   }

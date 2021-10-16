@@ -7,8 +7,8 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import scala.sys.process._
-import com.nec.arrow.TransferDefinitions
 import com.nec.cmake.CMakeBuilder.Builder
+import com.nec.native.NativeCompiler.{Defines, Program}
 import com.nec.spark.agile.CppResource.CppResources
 import com.typesafe.scalalogging.LazyLogging
 import javassist.compiler.CompileError
@@ -18,18 +18,18 @@ import javassist.compiler.CompileError
  *
  * Major OS are supported.
  */
-final case class CMakeBuilder(targetDir: Path, debug: Boolean) {
+final case class CMakeBuilder(targetDir: Path, defines: Defines) {
   def buildC(cSource: String): Path = {
     val SourcesDir = targetDir.resolve("sources")
     CppResources.All.copyTo(SourcesDir)
-    val maybeDebug = if (debug) "add_definitions(-DDEBUG)" else ""
+    val definesBits = defines.values.map { case (k, v) => s"add_definitions(-D$k=$v)" }
     lazy val CMakeListsTXT =
       s"""
 cmake_minimum_required(VERSION 3.6)
 project(HelloWorld LANGUAGES CXX C)
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 set (CMAKE_CXX_STANDARD 17)
-$maybeDebug
+${definesBits.mkString("\n")}
 ${CppResources.All.all
         .map(_.containingDir(SourcesDir))
         .toList
@@ -60,7 +60,9 @@ endif()
 
 object CMakeBuilder extends LazyLogging {
 
-  def buildC(cSource: String, debug: Boolean = false): Path = {
+  def buildC(code: String): Path = buildC(Program(code, Defines.empty))
+
+  def buildC(program: Program): Path = {
     val targetDir = Paths.get("target", s"c", s"${Instant.now().toEpochMilli}").toAbsolutePath
     if (Files.exists(targetDir)) {
       FileUtils.deleteDirectory(targetDir.toFile)
@@ -68,13 +70,15 @@ object CMakeBuilder extends LazyLogging {
 
     Files.createDirectories(targetDir)
 
-    CMakeBuilder(targetDir, debug).buildC(cSource)
+    CMakeBuilder(targetDir, program.defines).buildC(program.code)
   }
 
-  def buildCLogging(cSource: String, debug: Boolean = false): Path = {
+  def buildCLogging(code: String): Path = buildCLogging(Program(code, Defines.empty))
+
+  def buildCLogging(program: Program): Path = {
     try {
-      logger.debug(s"Code to compile: ${cSource}")
-      buildC(cSource, debug)
+      logger.debug(s"Program to compile: ${program}")
+      buildC(program)
     } catch {
       case e: Exception =>
         logger.info(s"Could not compile code due to error: ${e}", e)

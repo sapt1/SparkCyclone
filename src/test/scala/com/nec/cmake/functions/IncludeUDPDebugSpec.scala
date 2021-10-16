@@ -1,6 +1,7 @@
 package com.nec.cmake.functions
 
 import com.nec.cmake.{CMakeBuilder, UdpDebug}
+import com.nec.native.NativeCompiler.Program
 import com.nec.spark.agile.CExpressionEvaluation.CodeLines
 import org.scalatest.freespec.AnyFreeSpec
 
@@ -17,7 +18,7 @@ final class IncludeUDPDebugSpec extends AnyFreeSpec {
 
       println(code.cCode)
 
-      CMakeBuilder.buildC(code.cCode, debug = true)
+      CMakeBuilder.buildC(Program.debug(code.cCode))
     }
   }
 }

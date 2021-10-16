@@ -3,6 +3,7 @@ package com.nec.spark
 import com.nec.arrow.VeArrowNativeInterface
 import com.nec.aurora.Aurora
 import com.nec.aurora.Aurora.veo_proc_handle
+import com.nec.native.NativeCompiler.Program
 
 import java.util
 import scala.collection.JavaConverters.mapAsScalaMapConverter
@@ -49,26 +50,26 @@ object Aurora4SparkExecutorPlugin {
 
   trait LibraryStorage {
     // Get a local copy of the library for loading
-    def getLocalLibraryPath(code: String): Path
+    def getLocalLibraryPath(code: Program): Path
   }
 
   final class DriverFetchingLibraryStorage(pluginContext: PluginContext)
     extends LibraryStorage
     with LazyLogging {
 
-    private var locallyStoredLibs = Map.empty[String, Path]
+    private var locallyStoredLibs = Map.empty[Program, Path]
 
     /** Get a local copy of the library for loading */
-    override def getLocalLibraryPath(code: String): Path = this.synchronized {
-      locallyStoredLibs.get(code) match {
+    override def getLocalLibraryPath(program: Program): Path = this.synchronized {
+      locallyStoredLibs.get(program) match {
         case Some(result) =>
           logger.debug("Cache hit for executor-fetch for code.")
           result
         case None =>
           logger.debug("Cache miss for executor-fetch for code; asking Driver.")
-          val result = pluginContext.ask(RequestCompiledLibraryForCode(code))
+          val result = pluginContext.ask(RequestCompiledLibraryForCode(program))
           if (result == null) {
-            sys.error(s"Could not fetch library: ${code}")
+            sys.error(s"Could not fetch library: ${program}")
           } else {
             val localPath = Files.createTempFile("ve_fn", ".lib")
             Files.write(
@@ -76,7 +77,7 @@ object Aurora4SparkExecutorPlugin {
               result.asInstanceOf[RequestCompiledLibraryResponse].byteString.toByteArray
             )
             logger.debug(s"Saved file to '$localPath'")
-            locallyStoredLibs += code -> localPath
+            locallyStoredLibs += program -> localPath
             localPath
           }
       }

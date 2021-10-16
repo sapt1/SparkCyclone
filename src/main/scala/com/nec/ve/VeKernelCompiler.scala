@@ -1,14 +1,13 @@
 package com.nec.ve
 
-import com.nec.arrow.TransferDefinitions.TransferDefinitionsSourceCode
-import com.nec.arrow.functions.Join.JoinSourceCode
 import com.nec.cmake.UdpDebug
+import com.nec.native.NativeCompiler.{Defines, Program}
 import com.nec.spark.agile.CppResource.CppResources
 import com.nec.ve.VeKernelCompiler.VeCompilerConfig
 import com.typesafe.scalalogging.LazyLogging
+import org.apache.spark.SparkConf
 
 import java.nio.file._
-import org.apache.spark.SparkConf
 
 object VeKernelCompiler {
 
@@ -103,21 +102,15 @@ object VeKernelCompiler {
     }
   }
 
-  def compile_c(buildDir: Path = Paths.get("_ve_build"), config: VeCompilerConfig): Path = {
-    VeKernelCompiler(compilationPrefix = "_spark", buildDir.toAbsolutePath, config)
-      .compile_c(
-        List(TransferDefinitionsSourceCode, JoinSourceCode)
-          .mkString("\n\n\n")
-      )
-  }
-
   def compile_cpp(
     buildDir: Path = Paths.get("_ve_build"),
     config: VeCompilerConfig,
     code: String
-  ): Path = {
+  ): Path = compile_cpp(buildDir, config, Program(code, Defines.empty))
+
+  def compile_cpp(buildDir: Path, config: VeCompilerConfig, program: Program): Path = {
     VeKernelCompiler(compilationPrefix = "_spark", buildDir.toAbsolutePath, config)
-      .compile_c(code)
+      .compile_c(program)
   }
 
 }
@@ -155,7 +148,9 @@ final case class VeKernelCompiler(
     assert(ev == 0, s"Failed; data was: $res; process was ${process}; $resErr")
   }
 
-  def compile_c(sourceCode: String): Path = {
+  def compile_c(code: String): Path = compile_c(Program(code, Defines.empty))
+
+  def compile_c(program: Program): Path = {
     if (!Files.exists(buildDir)) Files.createDirectories(buildDir)
     val cSource = buildDir.resolve(s"${compilationPrefix}.c")
 
@@ -167,15 +162,16 @@ final case class VeKernelCompiler(
         .toList
         .map(i => i.toUri.toString.drop(sourcesDir.getParent.toUri.toString.length))
     }
-    Files.write(cSource, sourceCode.getBytes())
+    Files.write(cSource, program.code.getBytes())
     try {
       val oFile = buildDir.resolve(s"${compilationPrefix}.o")
       val soFile = buildDir.resolve(s"${compilationPrefix}.so")
-      import scala.sys.process._
       import config._
+
+      import scala.sys.process._
       val includesArgs = includes.map(i => s"-I${i}")
       val command: Seq[String] =
-        Seq(nccPath) ++ compilerArguments ++ includesArgs ++ Seq(
+        Seq(nccPath) ++ compilerArguments ++ program.defines.toArgsList ++ includesArgs ++ Seq(
           "-xc++",
           "-c",
           cSource.toString,

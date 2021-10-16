@@ -23,9 +23,9 @@ class Aurora4SparkDriverPlugin extends DriverPlugin with LazyLogging {
   private[spark] var nativeCompiler: NativeCompiler = _
   override def receive(message: Any): AnyRef = {
     message match {
-      case RequestCompiledLibraryForCode(code) =>
-        logger.debug(s"Received request for compiled code: '${code}'")
-        val localLocation = nativeCompiler.forCode(code)
+      case RequestCompiledLibraryForCode(program) =>
+        logger.debug(s"Received request for compiled code: '${program}'")
+        val localLocation = nativeCompiler.forProgram(program)
         logger.info(s"Local compiled location = '${localLocation}'")
         RequestCompiledLibraryResponse(ByteString.of(Files.readAllBytes(localLocation): _*))
       case other => super.receive(message)
@@ -45,16 +45,7 @@ class Aurora4SparkDriverPlugin extends DriverPlugin with LazyLogging {
       .conf()
       .set("spark.sql.extensions", allExtensions.map(_.getCanonicalName).mkString(",") + "," + sc.getConf.get("spark.sql.extensions", ""))
 
-    val tmpBuildDir = Files.createTempDirectory("ve-spark-tmp")
-    val testArgs: Map[String, String] = Map(
-      "ve_so_name" -> VeKernelCompiler
-        .compile_c(
-          buildDir = tmpBuildDir,
-          config = VeKernelCompiler.VeCompilerConfig.fromSparkConf(pluginContext.conf())
-        )
-        .toAbsolutePath
-        .toString
-    )
+    val testArgs: Map[String, String] = Map.empty
     testArgs.asJava
   }
 

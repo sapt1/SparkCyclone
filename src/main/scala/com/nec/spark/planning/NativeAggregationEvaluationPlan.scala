@@ -1,12 +1,20 @@
 package com.nec.spark.planning
 
 import com.nec.arrow.ArrowNativeInterface.SupportedVectorWrapper
+import com.nec.native.NativeCompiler.{Defines, Program}
 import com.nec.native.NativeEvaluator
-import com.nec.spark.agile.CFunctionGeneration.CFunction
-import com.nec.spark.planning.NativeAggregationEvaluationPlan.EvaluationMode.{PrePartitioned, TwoStaged}
-import com.nec.spark.planning.NativeAggregationEvaluationPlan.{EvaluationMode, writeVector}
+import com.nec.spark.agile.CFunctionGeneration.{CFunction, CVector, VeString}
+import com.nec.spark.planning.NativeAggregationEvaluationPlan.EvaluationMode.{
+  PrePartitioned,
+  TwoStaged
+}
+import com.nec.spark.planning.NativeAggregationEvaluationPlan.{
+  writeVector,
+  EvaluationMode,
+  TracerDefines,
+  TracerName
+}
 import com.nec.spark.agile.{CFunctionGeneration, SparkExpressionToCExpression}
-import com.nec.spark.planning.NativeAggregationEvaluationPlan.writeVector
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.arrow.memory.BufferAllocator
 import org.apache.arrow.vector._
@@ -21,6 +29,7 @@ import org.apache.spark.sql.util.ArrowUtilsExposed
 import org.apache.spark.sql.vectorized.{ArrowColumnVector, ColumnarBatch}
 import org.apache.spark.unsafe.types.UTF8String
 
+import java.util.UUID
 import scala.collection.JavaConverters.asJavaIterableConverter
 import scala.language.dynamics
 
@@ -69,8 +78,8 @@ final case class NativeAggregationEvaluationPlan(
     root
   }
 
-  def collectInputRows(inputRows: Iterator[InternalRow], target: List[FieldVector])(
-    implicit allocator: BufferAllocator
+  def collectInputRows(inputRows: Iterator[InternalRow], target: List[FieldVector])(implicit
+    allocator: BufferAllocator
   ): VectorSchemaRoot = {
     val root = new VectorSchemaRoot(target.asJava)
     val arrowWriter = ArrowWriter.create(root)
@@ -80,17 +89,24 @@ final case class NativeAggregationEvaluationPlan(
     root
   }
 
+  implicit class RichCFunction(fin: CFunction) {
+    def prependTracer: CFunction = fin.copy(inputs = CVector.varChar(TracerName) :: fin.inputs)
+  }
+
   private def executeRowWise(twoStaged: TwoStaged): RDD[InternalRow] = {
     import twoStaged._
     val partialFunctionName = s"${functionPrefix}_partial"
     val finalFunctionName = s"${functionPrefix}_final"
 
-    val evaluator = nativeEvaluator.forCode(
-      List(
-        partialFunction.toCodeLines(partialFunctionName),
-        finalFunction
-          .toCodeLinesNoHeader(finalFunctionName)
-      ).reduce(_ ++ _).lines.mkString("\n", "\n", "\n")
+    val evaluator = nativeEvaluator.forProgram(
+      Program(
+        code = List(
+          partialFunction.prependTracer.toCodeLines(partialFunctionName),
+          finalFunction
+            .toCodeLinesNoHeader(finalFunctionName)
+        ).reduce(_ ++ _).lines.mkString("\n", "\n", "\n"),
+        defines = TracerDefines
+      )
     )
 
     logger.debug(s"Will execute NewCEvaluationPlan for child ${child}; ${child.output}")
@@ -120,7 +136,6 @@ final case class NativeAggregationEvaluationPlan(
             inputArguments = inputArgs,
             outputArguments = outputArgs
           )
-
 
           (0 until partialOutputVectors.head.getValueCount).iterator.map { v_idx =>
             val writer = new UnsafeRowWriter(partialOutputVectors.size)
@@ -185,7 +200,9 @@ final case class NativeAggregationEvaluationPlan(
               .zipWithIndex
               .map { case (ne, idx) =>
                 CFunctionGeneration.allocateFrom(
-                  SparkExpressionToCExpression.sparkTypeToVeType(ne.dataType).makeCVector(s"out_${idx}")
+                  SparkExpressionToCExpression
+                    .sparkTypeToVeType(ne.dataType)
+                    .makeCVector(s"out_${idx}")
                 )(allocator)
               }
 
@@ -222,11 +239,19 @@ final case class NativeAggregationEvaluationPlan(
   private def executeOneGo(cFunction: CFunction): RDD[InternalRow] = {
     val functionName = s"${functionPrefix}_full"
 
-    val evaluator = nativeEvaluator.forCode(
-      List(cFunction.toCodeLines(functionName)).reduce(_ ++ _).lines.mkString("\n", "\n", "\n")
+    val evaluator = nativeEvaluator.forProgram(
+      Program(
+        code = List(cFunction.prependTracer.toCodeLines(functionName))
+          .reduce(_ ++ _)
+          .lines
+          .mkString("\n", "\n", "\n"),
+        defines = TracerDefines
+      )
     )
 
     logger.debug(s"Will execute NewCEvaluationPlan for child ${child}; ${child.output}")
+
+    val runId = java.time.Instant.now().getEpochSecond
 
     child
       .execute()
@@ -238,15 +263,23 @@ final case class NativeAggregationEvaluationPlan(
             val timeZoneId = conf.sessionLocalTimeZone
             val root =
               collectInputRows(rows, ArrowUtilsExposed.toArrowSchema(child.schema, timeZoneId))
-            val inputVectors = child.output.indices.map(root.getVector)
+
+            val tracer = CFunctionGeneration
+              .allocateFrom(VeString.makeCVector(TracerName))
+              .asInstanceOf[VarCharVector]
+            tracer.setValueCount(1)
+            val contextId = Math.abs(UUID.randomUUID().hashCode())
+            tracer.set(0, s"$runId-$contextId".getBytes())
+            val inputVectors: List[FieldVector] =
+              tracer :: child.output.indices.map(root.getVector).toList
             val outputVectors: List[FieldVector] =
               cFunction.outputs.map(CFunctionGeneration.allocateFrom(_))
 
             try {
 
-              val outputArgs = inputVectors.toList.map(_ => None) ++
+              val outputArgs = inputVectors.map(_ => None) ++
                 outputVectors.map(v => Some(SupportedVectorWrapper.wrapOutput(v)))
-              val inputArgs = inputVectors.toList.map(iv =>
+              val inputArgs = inputVectors.map(iv =>
                 Some(SupportedVectorWrapper.wrapInput(iv))
               ) ++ outputVectors.map(_ => None)
 
@@ -288,6 +321,11 @@ final case class NativeAggregationEvaluationPlan(
 }
 
 object NativeAggregationEvaluationPlan {
+  val TracerName = "tracer"
+
+  val TracerDefines: Defines = Defines(
+    Map("TRACER" -> TracerName)
+  )
 
   sealed trait EvaluationMode extends Serializable
   object EvaluationMode {

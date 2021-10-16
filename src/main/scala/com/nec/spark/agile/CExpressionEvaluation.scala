@@ -1,6 +1,7 @@
 package com.nec.spark.agile
 
 import com.nec.cmake.UdpDebug
+import com.nec.spark.planning.NativeAggregationEvaluationPlan.TracerName
 
 import scala.language.implicitConversions
 import org.apache.spark.sql.catalyst.expressions._
@@ -151,6 +152,7 @@ object CExpressionEvaluation {
         UdpDebug.conditional
           .send(
             "utcnanotime().c_str()",
+            s"std::string($TracerName->data, 0, $TracerName->offsets[1])",
             """" """",
             s""""${fullName.value}#${line.value}"""",
             """" """"

@@ -20,6 +20,7 @@ import com.nec.cmake.functions.ParseCSVSpec.{
   RichIntVector,
   RichVarCharVector
 }
+import com.nec.native.NativeCompiler.Program
 import com.nec.spark.agile.CExpressionEvaluation.CodeLines
 import com.nec.spark.agile.CFunctionGeneration.GroupByExpression.{
   GroupByAggregation,
@@ -748,9 +749,10 @@ object RealExpressionEvaluationSpec extends LazyLogging {
     logger.debug(s"Generated code: ${generatedSource.cCode}")
 
     val cLib = CMakeBuilder.buildCLogging(
-      cSource = List(TransferDefinitionsSourceCode, "\n\n", generatedSource.cCode)
-        .mkString("\n\n"),
-      debug = true
+      Program.debug(
+        List(TransferDefinitionsSourceCode, "\n\n", generatedSource.cCode)
+          .mkString("\n\n")
+      )
     )
 
     val nativeInterface = new CArrowNativeInterface(cLib.toString)

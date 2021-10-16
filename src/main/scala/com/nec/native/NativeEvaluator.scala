@@ -1,32 +1,35 @@
 package com.nec.native
 
-import com.nec.arrow.ArrowNativeInterface
 import com.nec.arrow.ArrowNativeInterface.DeferredArrowInterface
-import com.nec.arrow.CArrowNativeInterface
+import com.nec.arrow.{ArrowNativeInterface, CArrowNativeInterface}
 import com.nec.arrow.VeArrowNativeInterface.VeArrowNativeInterfaceLazyLib
 import com.nec.aurora.Aurora
-import com.nec.native.NativeCompiler.{CNativeCompiler, CNativeCompilerDebug}
+import com.nec.native.NativeCompiler.{CNativeCompiler, Defines, Program}
 import com.nec.spark.Aurora4SparkExecutorPlugin
 import com.typesafe.scalalogging.LazyLogging
 
 trait NativeEvaluator extends Serializable {
-  def forCode(code: String): ArrowNativeInterface
+  def forProgram(program: Program): ArrowNativeInterface
+  final def forCode(code: String): ArrowNativeInterface = forProgram(Program(code, Defines.empty))
 }
 
 object NativeEvaluator {
 
   /** Selected when running in CMake mode */
   object CNativeEvaluator extends NativeEvaluator {
-    override def forCode(code: String): ArrowNativeInterface = {
-      new CArrowNativeInterface(CNativeCompiler.forCode(code).toAbsolutePath.toString)
+    override def forProgram(program: Program): ArrowNativeInterface = {
+      new CArrowNativeInterface(CNativeCompiler.forProgram(program).toAbsolutePath.toString)
     }
   }
-  final case class CNativeEvaluator(debug: Boolean) extends NativeEvaluator {
-    override def forCode(code: String): ArrowNativeInterface = {
+
+  final case class CNativeEvaluator(defines: Defines) extends NativeEvaluator {
+    override def forProgram(program: Program): ArrowNativeInterface =
       new CArrowNativeInterface(
-        (if (debug) CNativeCompilerDebug else CNativeCompiler).forCode(code).toAbsolutePath.toString
+        CNativeCompiler
+          .forProgram(Program(program.code, defines ++ program.defines))
+          .toAbsolutePath
+          .toString
       )
-    }
   }
 
   final class VectorEngineNativeEvaluator(
@@ -34,21 +37,21 @@ object NativeEvaluator {
     nativeCompiler: NativeCompiler
   ) extends NativeEvaluator
     with LazyLogging {
-    override def forCode(code: String): ArrowNativeInterface = {
-      val localLib = nativeCompiler.forCode(code).toString
+    override def forProgram(program: Program): ArrowNativeInterface = {
+      val localLib = nativeCompiler.forProgram(program).toString
       logger.debug(s"For evaluation, will use local lib '$localLib'")
       new VeArrowNativeInterfaceLazyLib(proc, localLib)
     }
   }
 
   case object ExecutorPluginManagedEvaluator extends NativeEvaluator with LazyLogging {
-    def forCode(code: String): ArrowNativeInterface = {
+    def forProgram(program: Program): ArrowNativeInterface = {
       // defer because we need the executors to initialize first
       logger.debug(s"For evaluation, will refer to the Executor Plugin")
       DeferredArrowInterface(() =>
         new VeArrowNativeInterfaceLazyLib(
           Aurora4SparkExecutorPlugin._veo_proc,
-          Aurora4SparkExecutorPlugin.libraryStorage.getLocalLibraryPath(code).toString
+          Aurora4SparkExecutorPlugin.libraryStorage.getLocalLibraryPath(program).toString
         )
       )
     }
