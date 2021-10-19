@@ -125,6 +125,7 @@ inline uint64_t check_valid(uint64_t *validityBuffer, int32_t idx) {
 
     return res;
 }
+
 frovedis::words data_offsets_to_words(const char *data, const int32_t *offsets, const int32_t size, const int32_t count) {
     frovedis::words ret;
     if (count == 0 || size == 0) {
@@ -132,7 +133,7 @@ frovedis::words data_offsets_to_words(const char *data, const int32_t *offsets, 
     }
 
     #ifdef DEBUG
-        std::cout << "count: " << count << std::endl;
+        std::cout << "when converting to words, count: " << count << std::endl;
     #endif
 
     ret.lens.resize(count);
@@ -145,24 +146,14 @@ frovedis::words data_offsets_to_words(const char *data, const int32_t *offsets, 
         ret.starts[i] = offsets[i];
     }
 
+    size_t chars_size = ret.starts[count - 1] + ret.lens[count - 1];
     #ifdef DEBUG
-        std::cout << "size: " << size << std::endl;
+        std::cout << "when converting to words, size: " << chars_size << std::endl;
     #endif
+    ret.chars.resize(chars_size);
+    frovedis::char_to_int(data, chars_size, ret.chars.data());
 
-    if (size == 32) {
-        size_t chars_size = ret.starts[count - 1] + ret.lens[count - 1];
-
-        #ifdef DEBUG
-            std::cout << "using new size: " << chars_size << std::endl;
-        #endif
-
-        ret.chars.resize(chars_size);
-        frovedis::char_to_int(data, chars_size, ret.chars.data());
-    } else {
-        ret.chars.resize(size);
-        frovedis::char_to_int(data, size, ret.chars.data());
-    }
-
+    ret.print();
     return ret;
 }
 
@@ -178,6 +169,8 @@ void words_to_varchar_vector(frovedis::words& in, nullable_varchar_vector *out) 
     #ifdef DEBUG
         std::cout << utcnanotime().c_str() << " $$ " << "words_to_varchar_vector" << std::endl << std::flush;
     #endif
+
+//    in.print();
 
     out->count = in.lens.size();
     #ifdef DEBUG

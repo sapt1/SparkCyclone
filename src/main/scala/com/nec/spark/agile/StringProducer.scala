@@ -21,7 +21,7 @@ object StringProducer {
 
 //  def copyString(inputName: String): StringProducer = ImpCopyStringProducer(inputName)
 
-  private final case class ImpCopyStringProducer(inputName: String)
+  final case class ImpCopyStringProducer(inputName: String)
     extends ImperativeStringProducer
     with CopyStringProducer {
 
@@ -38,7 +38,7 @@ object StringProducer {
     def inputName: String
   }
 
-  private final case class FrovedisCopyStringProducer(inputName: String)
+  final case class FrovedisCopyStringProducer(inputName: String)
     extends FrovedisStringProducer
     with CopyStringProducer {
     def frovedisStarts(outputName: String) = s"${outputName}_starts"
