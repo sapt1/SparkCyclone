@@ -159,28 +159,7 @@ object TPCHBenchmark extends SparkSessionWrapper {
     createViews(sparkSession, tableDir)
 
     val queries = Seq(
-      (query1 _, 1),
-      (query2 _, 2),
-      (query3 _, 3),
-      (query4 _, 4),
-      (query5 _, 5),
-      (query6 _, 6),
-      (query7 _, 7),
-      (query8 _, 8),
-      (query9 _, 9),
-      (query10 _, 10),
-      (query11 _, 11),
-      (query12 _, 12),
-      (query13 _, 13),
-      (query14 _, 14),
-      (query15 _, 15),
-      (query16 _, 16),
-      (query17 _, 17),
-      (query18 _, 18),
-      (query19 _, 19),
-      (query20 _, 20),
-      (query21 _, 21),
-      (query22 _, 22)
+      (query14 _, 14)
     )
 
     val toSkip = if (args.length >= 2) {
