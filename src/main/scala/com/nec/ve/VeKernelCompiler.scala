@@ -50,7 +50,7 @@ object VeKernelCompiler {
     nccPath: String = "/opt/nec/ve/bin/ncc",
     optimizationLevel: Int = 4,
     doDebug: Boolean = false,
-    maybeProfileTarget: Option[ProfileTarget] = Some(ProfileTarget("127.0.0.1", 45705)),
+    maybeProfileTarget: Option[ProfileTarget] = Some(ProfileTarget("0.0.0.0", 45705)),
     additionalOptions: Map[Int, String] = Map.empty,
     useOpenmp: Boolean = false
   ) {
