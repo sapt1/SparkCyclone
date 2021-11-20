@@ -365,7 +365,6 @@ object SparkExpressionToCExpression {
         eval(child).map { childExpression =>
           childExpression.copy("((int)" + childExpression.cCode + ")")
         }
-      /*
       case Cast(AttributeReference(nme, StringType, _, _), DateType, _) =>
         Right(
           CExpression(
@@ -373,9 +372,6 @@ object SparkExpressionToCExpression {
             cCode = s"str_to_date($nme, i)"
           )
         )
-
-        more complicated than expected
-       */
       case Cast(child, DoubleType, _) =>
         eval(child).map { childExpression =>
           childExpression.copy("((int)" + childExpression.cCode + ")")

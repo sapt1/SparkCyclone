@@ -197,9 +197,16 @@ frovedis::words varchar_vector_to_words(const nullable_varchar_vector *v) {
     return data_offsets_to_words(v->data, v->offsets, v->dataSize, v->count);
 }
 
+/**
+Spark's date conversion uses int values for doing date operations
+Not sure here how to implement this as Frovedis stores the datetime format as '|Y|m|d|...|...' rather than UTC seconds (see: makedatetime)
+**/
 int str_to_date(const nullable_varchar_vector *v, int i) {
     datetime_t dt = frovedis::parsedatetime(std::string(v->data, v->offsets[i], v->offsets[i+1] - v->offsets[i]), "%Y-%m-%d");
-    return dt >> (3 * 8);
+    datetime_t edge = frovedis::parsedatetime("1971-01-01", "%Y-%m-%d");
+    int d_i = dt >> (3 * 8);
+    int d_e = edge >> (3 * 8);
+    return d_i - d_e;
 }
 
 void words_to_varchar_vector(frovedis::words& in, nullable_varchar_vector *out) {
