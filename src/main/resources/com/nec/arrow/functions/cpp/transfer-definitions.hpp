@@ -196,17 +196,23 @@ frovedis::words varchar_vector_to_words(const non_null_varchar_vector *v) {
 frovedis::words varchar_vector_to_words(const nullable_varchar_vector *v) {
     return data_offsets_to_words(v->data, v->offsets, v->dataSize, v->count);
 }
+#include <iostream>
+#include <sstream>
+#include <ctime>
+#include <iomanip>
 
-/**
-Spark's date conversion uses int values for doing date operations
-Not sure here how to implement this as Frovedis stores the datetime format as '|Y|m|d|...|...' rather than UTC seconds (see: makedatetime)
-**/
 int str_to_date(const nullable_varchar_vector *v, int i) {
-    datetime_t dt = frovedis::parsedatetime(std::string(v->data, v->offsets[i], v->offsets[i+1] - v->offsets[i]), "%Y-%m-%d");
-    datetime_t edge = frovedis::parsedatetime("1971-01-01", "%Y-%m-%d");
-    int d_i = dt >> (3 * 8);
-    int d_e = edge >> (3 * 8);
-    return d_i - d_e;
+    struct tm target = {};
+    struct tm origin = {};
+    std::string s = std::string(v->data, v->offsets[i], v->offsets[i+1] - v->offsets[i]);
+    std::string s_origin = "1970-01-01";
+    std::istringstream ss(s);
+    std::istringstream ss_origin(s_origin);
+    ss >> std::get_time(&target, "%Y-%m-%d");
+    ss_origin >> std::get_time(&origin, "%Y-%m-%d");
+    std::time_t x = std::mktime(&target);
+    std::time_t y = std::mktime(&origin);
+    return (int)(std::difftime(x, y) / (60 * 60 * 24));
 }
 
 void words_to_varchar_vector(frovedis::words& in, nullable_varchar_vector *out) {

@@ -12,7 +12,7 @@ import org.scalatest.freespec.AnyFreeSpec
 import org.scalatestplus.scalacheck.Checkers
 
 final class StrToDateSpec extends AnyFreeSpec with Checkers {
-  "it works" in {
+  "Spark dates can be achieved through C++" in {
     val cLib = CMakeBuilder.buildCLogging(
       List(
         TransferDefinitionsSourceCode,
