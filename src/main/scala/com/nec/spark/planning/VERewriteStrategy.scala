@@ -20,24 +20,20 @@
 package com.nec.spark.planning
 
 import com.nec.native.NativeEvaluator
-import com.nec.spark.agile.{CFunctionGeneration, SparkExpressionToCExpression, StringHole}
-import com.nec.spark.agile.SparkExpressionToCExpression.{
-  eval,
-  replaceReferences,
-  sparkSortDirectionToSortOrdering,
-  sparkTypeToScalarVeType,
-  sparkTypeToVeType,
-  EvalFallback
-}
+import com.nec.spark.agile.CFunctionGeneration._
+import com.nec.spark.agile.SparkExpressionToCExpression._
 import com.nec.spark.agile.groupby.ConvertNamedExpression.{computeAggregate, mapGroupingExpression}
-import com.nec.spark.agile.groupby.GroupByOutline.{GroupingKey, StagedProjection}
+import com.nec.spark.agile.groupby.GroupByOutline.GroupingKey
 import com.nec.spark.agile.groupby.{
   ConvertNamedExpression,
   GroupByOutline,
   GroupByPartialGenerator,
   GroupByPartialToFinalGenerator
 }
+import com.nec.spark.agile.{CFunctionGeneration, SparkExpressionToCExpression, StringHole}
 import com.nec.spark.planning.NativeAggregationEvaluationPlan.EvaluationMode
+import com.nec.spark.planning.NativeSortEvaluationPlan.SortingMode.Coalesced
+import com.nec.spark.planning.TransformUtil.RichTreeNode
 import com.nec.spark.planning.VERewriteStrategy.{
   GroupPrefix,
   InputPrefix,
@@ -56,23 +52,10 @@ import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, Sort}
 import org.apache.spark.sql.catalyst.plans.physical.HashPartitioning
 import org.apache.spark.sql.execution.SparkPlan
 import org.apache.spark.sql.execution.exchange.{REPARTITION, ShuffleExchangeExec}
+import org.apache.spark.sql.types.StringType
 
 import scala.collection.immutable
 import scala.util.Try
-import com.nec.spark.agile.CFunctionGeneration.{
-  renderFilter,
-  renderProjection,
-  CExpression,
-  CScalarVector,
-  NamedTypedCExpression,
-  TypedCExpression2,
-  VeFilter,
-  VeProjection,
-  VeSort,
-  VeSortExpression
-}
-import com.nec.spark.planning.NativeSortEvaluationPlan.SortingMode.Coalesced
-import com.nec.spark.planning.TransformUtil.RichTreeNode
 
 object VERewriteStrategy {
   var _enabled: Boolean = true
@@ -128,15 +111,23 @@ final case class VERewriteStrategy(
 
           val planE = for {
             outputs <- projectList.toList.zipWithIndex.map { case (att, idx) =>
-              eval(replaceReferences(InputPrefix, plan.inputSet.toList, att)).map { cexp =>
-                Right(
-                  NamedTypedCExpression(
-                    name = s"output_${idx}",
-                    sparkTypeToScalarVeType(att.dataType),
-                    cExpression = cexp
+              val referenced = replaceReferences(InputPrefix, plan.inputSet.toList, att)
+              if (referenced.dataType == StringType)
+                evalString(referenced).map(stringProducer =>
+                  Left(
+                    NamedStringExpression(name = s"output_${idx}", stringProducer = stringProducer)
                   )
                 )
-              }
+              else
+                eval(referenced).map { cexp =>
+                  Right(
+                    NamedTypedCExpression(
+                      name = s"output_${idx}",
+                      sparkTypeToScalarVeType(att.dataType),
+                      cExpression = cexp
+                    )
+                  )
+                }
             }.sequence
           } yield List(
             ArrowColumnarToRowPlan(
@@ -161,17 +152,29 @@ final case class VERewriteStrategy(
         case f @ logical.Filter(condition, child) if options.projectFilter =>
           implicit val fallback: EvalFallback = EvalFallback.noOp
 
+          val replacer =
+            SparkExpressionToCExpression.referenceReplacer(InputPrefix, plan.inputSet.toList)
           val planE = for {
-            cond <- eval(replaceReferences(InputPrefix, plan.inputSet.toList, condition))
+            cond <- eval(condition.transform(replacer).transform(StringHole.transform))
             data = child.output.toList.zipWithIndex.map { case (att, idx) =>
-              sparkTypeToScalarVeType(att.dataType).makeCVector(s"${InputPrefix}$idx")
+              sparkTypeToVeType(att.dataType).makeCVector(s"${InputPrefix}$idx")
             }
           } yield List(
             ArrowColumnarToRowPlan(
               OneStageEvaluationPlan(
                 outputExpressions = f.output,
                 functionName = s"flt_${functionPrefix}",
-                cFunction = renderFilter(VeFilter(data = data, condition = cond)),
+                cFunction = renderFilter(
+                  VeFilter(
+                    stringVectorComputations = StringHole
+                      .process(condition.transform(replacer))
+                      .toList
+                      .flatMap(_.stringParts)
+                      .distinct,
+                    data = data,
+                    condition = cond
+                  )
+                ),
                 child = RowToArrowColumnarPlan(planLater(child)),
                 nativeEvaluator = nativeEvaluator
               )
@@ -354,7 +357,7 @@ final case class VERewriteStrategy(
           val evaluationPlan = evaluationPlanE.fold(sys.error, identity)
           logger.info(s"Plan is: ${evaluationPlan}")
           List(evaluationPlan)
-        case Sort(orders, global, child) if (options.enableVeSorting) => {
+        case Sort(orders, global, child) if options.enableVeSorting => {
           val inputsList = child.output.zipWithIndex.map { case (att, id) =>
             sparkTypeToScalarVeType(att.dataType)
               .makeCVector(s"${InputPrefix}${id}")

@@ -19,6 +19,8 @@
  */
 package com.nec.tpc
 
+import java.time.LocalDate
+
 case class Lineitem(
   l_orderkey: Long,
   l_partkey: Long,
@@ -30,7 +32,7 @@ case class Lineitem(
   l_tax: Double,
   l_returnflag: String,
   l_linestatus: String,
-  l_shipdate: String,
+  l_shipdate: LocalDate,
   l_commitdate: String,
   l_receiptdate: String,
   l_shipinstruct: String,

@@ -30,6 +30,8 @@ import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
 
+import java.time.LocalDate
+
 class TPCHSqlCSpec
   extends AnyFreeSpec
   with BeforeAndAfter
@@ -82,7 +84,7 @@ class TPCHSqlCSpec
             p(7).trim.toDouble,
             p(8).trim,
             p(9).trim,
-            p(10).trim,
+            LocalDate.parse(p(10).trim),
             p(11).trim,
             p(12).trim,
             p(13).trim,
@@ -110,7 +112,7 @@ class TPCHSqlCSpec
             p(1).trim.toLong,
             p(2).trim,
             p(3).trim.toDouble,
-            p(4).trim,
+            LocalDate.parse(p(4).trim),
             p(5).trim,
             p(6).trim,
             p(7).trim.toLong,

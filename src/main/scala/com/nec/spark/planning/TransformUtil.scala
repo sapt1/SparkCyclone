@@ -7,4 +7,9 @@ object TransformUtil {
     def transformSelf(rule: PartialFunction[Expression, Expression]): NamedExpression =
       namedExpression.transform(rule).asInstanceOf[NamedExpression]
   }
+  def transformExpression(
+    expression: Expression,
+    rule: PartialFunction[Expression, Expression]
+  ): Expression =
+    expression.transform(rule)
 }

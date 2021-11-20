@@ -33,12 +33,7 @@ import com.nec.arrow.TransferDefinitions.TransferDefinitionsSourceCode
 import com.nec.arrow.{CArrowNativeInterface, WithTestAllocator}
 import com.nec.cmake.CMakeBuilder
 import com.nec.cmake.eval.StaticTypingTestAdditions._
-import com.nec.util.RichVectors.{
-  RichBigIntVector,
-  RichFloat8,
-  RichIntVector,
-  RichVarCharVector
-}
+import com.nec.util.RichVectors.{RichBigIntVector, RichFloat8, RichIntVector, RichVarCharVector}
 import com.nec.spark.agile.CExpressionEvaluation.CodeLines
 import com.nec.spark.agile.CFunctionGeneration.GroupByExpression.{
   GroupByAggregation,
@@ -877,7 +872,13 @@ object RealExpressionEvaluationSpec extends LazyLogging {
     val functionName = "filter_f"
 
     val generatedSource =
-      renderFilter(VeFilter(data = inputArguments.inputs, condition = condition))
+      renderFilter(
+        VeFilter(
+          data = inputArguments.inputs,
+          condition = condition,
+          stringVectorComputations = Nil
+        )
+      )
         .toCodeLines(functionName)
 
     val cLib = CMakeBuilder.buildCLogging(

@@ -19,6 +19,8 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
+#include "parsedatetime.hpp"
+#include "parsedatetime.cc"
 #include <string.h>
 #include <stdint.h>
 #include <math.h>
@@ -193,6 +195,11 @@ frovedis::words varchar_vector_to_words(const non_null_varchar_vector *v) {
 
 frovedis::words varchar_vector_to_words(const nullable_varchar_vector *v) {
     return data_offsets_to_words(v->data, v->offsets, v->dataSize, v->count);
+}
+
+int str_to_date(const nullable_varchar_vector *v, int i) {
+    datetime_t dt = frovedis::parsedatetime(std::string(v->data, v->offsets[i], v->offsets[i+1] - v->offsets[i]), "%Y-%m-%d");
+    return dt >> (3 * 8);
 }
 
 void words_to_varchar_vector(frovedis::words& in, nullable_varchar_vector *out) {

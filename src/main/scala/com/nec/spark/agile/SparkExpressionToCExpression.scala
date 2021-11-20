@@ -68,11 +68,10 @@ object SparkExpressionToCExpression {
     inputs.indexWhere(_.exprId == ar.exprId) match {
       case -1 =>
         sys.error(s"Could not find a reference for ${ar} from set of: ${inputs}")
+      case idx if ar.dataType == StringType =>
+        ar.withName(s"${prefix}${idx}")
       case idx =>
-        if (ar.dataType == StringType)
-          ar.withName(s"${prefix}${idx}")
-        else
-          ar.withName(s"${prefix}${idx}->data[i]")
+        ar.withName(s"${prefix}${idx}->data[i]")
     }
   }
 
@@ -301,6 +300,8 @@ object SparkExpressionToCExpression {
             isNotNullCode = None
           )
         }
+      case IsNotNull(AttributeReference(name, StringType, _, _)) =>
+        Right(CExpression(isNotNullCode = None, cCode = s"check_valid(${name}->validityBuffer, i)"))
       case IsNotNull(child) =>
         eval(child).map { ex =>
           CExpression(
@@ -364,12 +365,21 @@ object SparkExpressionToCExpression {
         eval(child).map { childExpression =>
           childExpression.copy("((int)" + childExpression.cCode + ")")
         }
+      /*
+      case Cast(AttributeReference(nme, StringType, _, _), DateType, _) =>
+        Right(
+          CExpression(
+            isNotNullCode = Some(s"check_valid(${nme}->validityBuffer, i)"),
+            cCode = s"str_to_date($nme, i)"
+          )
+        )
 
+        more complicated than expected
+       */
       case Cast(child, DoubleType, _) =>
         eval(child).map { childExpression =>
           childExpression.copy("((int)" + childExpression.cCode + ")")
         }
-
       case Cast(child, LongType, _) =>
         eval(child).map { childExpression =>
           childExpression.copy("((long long)" + childExpression.cCode + ")")
@@ -436,6 +446,7 @@ object SparkExpressionToCExpression {
       case LongType      => VeScalarType.veNullableLong
       case ShortType     => VeScalarType.veNullableInt
       case BooleanType   => VeScalarType.veNullableInt
+      case DateType      => VeScalarType.veNullableInt
       case TimestampType => VeScalarType.veNullableLong
     }
   }
@@ -445,6 +456,7 @@ object SparkExpressionToCExpression {
       case IntegerType   => VeScalarType.veNullableInt
       case LongType      => VeScalarType.veNullableLong
       case ShortType     => VeScalarType.veNullableInt
+      case DateType      => VeScalarType.veNullableInt
       case BooleanType   => VeScalarType.veNullableInt
       case StringType    => VeString
       case TimestampType => VeScalarType.veNullableLong

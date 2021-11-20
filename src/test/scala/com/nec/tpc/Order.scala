@@ -19,12 +19,14 @@
  */
 package com.nec.tpc
 
+import java.time.LocalDate
+
 case class Order(
   o_orderkey: Long,
   o_custkey: Long,
   o_orderstatus: String,
   o_totalprice: Double,
-  o_orderdate: String,
+  o_orderdate: LocalDate,
   o_orderpriority: String,
   o_clerk: String,
   o_shippriority: Long,

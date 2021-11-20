@@ -23,6 +23,8 @@ import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.internal.SQLConf.CODEGEN_FALLBACK
 import org.apache.spark.sql.Dataset
 
+import java.time.LocalDate
+
 // TPC-H table schemas
 case class Customer(
   c_custkey: Long,
@@ -46,7 +48,7 @@ case class Lineitem(
   l_tax: Double,
   l_returnflag: String,
   l_linestatus: String,
-  l_shipdate: String,
+  l_shipdate: LocalDate,
   l_commitdate: String,
   l_receiptdate: String,
   l_shipinstruct: String,
@@ -61,7 +63,7 @@ case class Order(
   o_custkey: Long,
   o_orderstatus: String,
   o_totalprice: Double,
-  o_orderdate: String,
+  o_orderdate: LocalDate,
   o_orderpriority: String,
   o_clerk: String,
   o_shippriority: Long,

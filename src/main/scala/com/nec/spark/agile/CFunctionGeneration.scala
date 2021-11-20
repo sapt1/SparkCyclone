@@ -27,14 +27,15 @@ import com.nec.spark.agile.CFunctionGeneration.VeScalarType.{
   VeNullableInt,
   VeNullableLong
 }
+import com.nec.spark.agile.StringHole.StringHoleEvaluation
 import com.nec.spark.agile.StringProducer.{
-  FilteringProducer,
   FrovedisCopyStringProducer,
-  FrovedisStringProducer
+  FrovedisStringProducer,
+  ImperativeStringProducer
 }
 import com.nec.spark.agile.groupby.GroupByOutline
 import org.apache.arrow.memory.BufferAllocator
-import org.apache.arrow.vector.{BigIntVector, FieldVector, Float8Vector, IntVector, VarCharVector}
+import org.apache.arrow.vector._
 import org.apache.spark.sql.types.{DataType, DateType, DoubleType, IntegerType}
 
 /** Spark-free function evaluation */
@@ -391,7 +392,11 @@ object CFunctionGeneration {
     }
   }
 
-  final case class VeFilter[Data, Condition](data: List[Data], condition: Condition)
+  final case class VeFilter[Data, Condition](
+    stringVectorComputations: List[StringHoleEvaluation],
+    data: List[Data],
+    condition: Condition
+  )
 
   final case class VeSort[Data, Sort](data: List[Data], sorts: List[Sort])
 
@@ -543,6 +548,7 @@ object CFunctionGeneration {
       inputs = filter.data,
       outputs = filterOutput,
       body = CodeLines.from(
+        filter.stringVectorComputations.distinct.map(_.computeVector),
         s"std::vector<size_t> matching_ids;",
         s"for ( long i = 0; i < input_0->count; i++) {",
         CodeLines
@@ -562,6 +568,7 @@ object CFunctionGeneration {
           })
           .indented,
         "}",
+        filter.stringVectorComputations.distinct.map(_.deallocData),
         filter.data.zipWithIndex.map {
           case (cv @ CVarChar(name), idx) =>
             val varName = cv.replaceName("input", "output").name
@@ -570,7 +577,7 @@ object CFunctionGeneration {
             CodeLines.from(
               fp.init(varName, "matching_ids.size()"),
               "for ( int g = 0; g < matching_ids.size(); g++ ) {",
-              CodeLines.from("int i = matching_ids[g];", fp.produce(varName)).indented,
+              CodeLines.from("int i = matching_ids[g];", fp.produce(varName, "g")).indented,
               "}",
               fp.complete(varName)
             )
@@ -627,8 +634,24 @@ object CFunctionGeneration {
             s"$outputName->data = (${veType.cScalarType}*) malloc($outputName->count * sizeof(${veType.cScalarType}));",
             s"$outputName->validityBuffer = (uint64_t *) malloc(ceil($outputName->count / 64.0) * sizeof(uint64_t));"
           )
-        case (Left(NamedStringExpression(name, stringProducer)), idx) =>
-          StringProducer.produceVarChar("input_0->count", name, stringProducer).block
+        case (Left(NamedStringExpression(name, stringProducer: ImperativeStringProducer)), idx) =>
+          StringProducer
+            .produceVarChar(
+              inputCount = "input_0->count",
+              outputName = name,
+              stringProducer = stringProducer
+            )
+            .block
+        case (Left(NamedStringExpression(name, stringProducer: FrovedisStringProducer)), idx) =>
+          StringProducer
+            .produceVarChar(
+              inputCount = "input_0->count",
+              outputName = name,
+              stringProducer = stringProducer,
+              outputCount = "input_0->count",
+              outputIdx = "i"
+            )
+            .block
       },
       "for ( long i = 0; i < input_0->count; i++ ) {",
       veDataTransformation.outputs.zipWithIndex
