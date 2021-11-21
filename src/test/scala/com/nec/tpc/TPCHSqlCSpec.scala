@@ -415,7 +415,7 @@ class TPCHSqlCSpec
       Seq(
         StructField("_0", LongType),
         StructField("_1", DoubleType),
-        StructField("_2", DataTypes.StringType),
+        StructField("_2", DataTypes.DateType),
         StructField("_3", DataTypes.LongType)
       )
     )

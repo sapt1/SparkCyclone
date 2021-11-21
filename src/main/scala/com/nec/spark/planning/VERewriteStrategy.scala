@@ -106,7 +106,8 @@ final case class VERewriteStrategy(
       )
 
       def res: immutable.Seq[SparkPlan] = plan match {
-        case logical.Project(projectList, child) if projectList.nonEmpty && options.projectFilter =>
+        case logical.Project(projectList, child)
+            if projectList.nonEmpty && options.projectFilter && false =>
           implicit val fallback: EvalFallback = EvalFallback.noOp
 
           val planE = for {
@@ -149,7 +150,7 @@ final case class VERewriteStrategy(
           )
 
           planE.fold(e => sys.error(s"Could not map ${e}"), identity)
-        case f @ logical.Filter(condition, child) if options.projectFilter =>
+        case f @ logical.Filter(condition, child) if options.projectFilter && false =>
           implicit val fallback: EvalFallback = EvalFallback.noOp
 
           val replacer =

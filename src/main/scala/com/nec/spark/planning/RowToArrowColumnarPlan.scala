@@ -26,6 +26,8 @@ object RowToArrowColumnarPlan {
     arrowWriter.finish()
     root
   }
+
+  val RowsPerBatch = 10000
 }
 
 case class RowToArrowColumnarPlan(override val child: SparkPlan) extends RowToColumnarTransition {
@@ -38,7 +40,7 @@ case class RowToArrowColumnarPlan(override val child: SparkPlan) extends RowToCo
     val rows = child
       .execute()
       .mapPartitions(rowIt => {
-        Iterator {
+        Iterator.continually {
           val root =
             collectInputRows(rowIt, ArrowUtilsExposed.toArrowSchema(child.schema, timeZoneId))
           val size = new ColumnarBatch(
