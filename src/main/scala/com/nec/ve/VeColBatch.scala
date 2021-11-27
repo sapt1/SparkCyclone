@@ -81,7 +81,7 @@ object VeColBatch {
         val validityBuffer = ByteBuffer.allocateDirect(bufferSizes.last.toInt)
 
         veProcess.get(bufferLocations.head, dataBuffer, dataBuffer.limit())
-        veProcess.get(bufferLocations.head, validityBuffer, dataBuffer.limit())
+        veProcess.get(bufferLocations.last, validityBuffer, dataBuffer.limit())
         val outputBuffer = ByteBuffer.allocate(dataBuffer.limit() + validityBuffer.limit() + 4)
 
         outputBuffer.put(dataBuffer)
