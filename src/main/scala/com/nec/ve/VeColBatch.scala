@@ -116,7 +116,7 @@ object VeColBatch {
           List(doubleVec.data, doubleVec.validityBuffer)
         )
       }
-      case _ => ??
+      case _ => ???
 
     }
 
