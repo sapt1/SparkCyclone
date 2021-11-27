@@ -75,7 +75,11 @@ final class ArrowTransferCheck extends AnyFreeSpec with WithVeProcess with VeKer
         withArrowFloat8VectorI(List(1, 2, 3)) { f8v =>
           val colVec: VeColVector = VeColVector.fromFloat8Vector(f8v)
           println("HERE")
-          val newColVec = colVec.deserialize(colVec.serialize())
+          val serialized =
+            colVec.serialize()
+          println("HERE")
+
+          val newColVec = colVec.deserialize(serialized)
           println("HERE")
           val newColVecArrow = colVec.toArrowVector()
           println("HERE")
