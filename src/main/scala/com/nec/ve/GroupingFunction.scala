@@ -121,7 +121,7 @@ object GroupingFunction {
                       val fp =
                         StringProducer.FilteringProducer(
                           outName,
-                          StringProducer.ImpCopyStringProducer(s"${input.name}[0]")
+                          StringProducer.FrovedisCopyStringProducer(s"${input.name}[0]")
                         )
                       CodeLines
                         .from(
