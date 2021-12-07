@@ -99,7 +99,6 @@ object VeColBatchConverters {
     with Logging
     with SupportsVeColBatch {
 
-
     override protected def doCanonicalize(): SparkPlan = {
       super.doCanonicalize()
     }
@@ -109,6 +108,7 @@ object VeColBatchConverters {
     }
     override def executeVeColumnar(): RDD[VeColBatch] = {
       require(!child.isInstanceOf[SupportsVeColBatch], "Child should not be a VE plan")
+      println(s"Spark2VE=>${child}")
 
       //      val numInputRows = longMetric("numInputRows")
 //      val numOutputBatches = longMetric("numOutputBatches")
