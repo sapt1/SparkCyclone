@@ -20,68 +20,21 @@
 package com.nec.spark
 
 import com.nec.spark.LocalVeoExtension.compilerRule
-import com.nec.spark.planning.OneStageEvaluationPlan.VeFunction
-import com.nec.spark.planning.OneStageEvaluationPlan.VeFunction.VeFunctionStatus
-import com.nec.spark.planning.OneStageEvaluationPlan.VeFunction.VeFunctionStatus.SourceCode
-import com.nec.spark.planning.PlanCallsVeFunction.UncompiledPlan
 import com.nec.spark.planning.{
-  PlanCallsVeFunction,
+  ParallelCompilationColumnarRule,
   VERewriteStrategy,
   VeColumnarRule,
   VeRewriteStrategyOptions
 }
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.internal.Logging
-import org.apache.spark.sql.catalyst.rules.Rule
-import org.apache.spark.sql.execution.{ColumnarRule, SparkPlan}
+import org.apache.spark.sql.execution.ColumnarRule
 import org.apache.spark.sql.{SparkSession, SparkSessionExtensions}
-
-import java.nio.file.Path
-import java.time.Instant
 
 object LocalVeoExtension extends LazyLogging {
   var _enabled = true
 
-  def compilerRule(sparkSession: SparkSession): ColumnarRule = new ColumnarRule {
-    override def preColumnarTransitions: Rule[SparkPlan] = { plan =>
-      val uncompiledOnes = plan.collect { case UncompiledPlan(plan) =>
-        plan
-      }
-
-      logger.debug(s"Found ${uncompiledOnes.length} plans uncompiled")
-      if (uncompiledOnes.nonEmpty) {
-
-        val uncompiledCodes = uncompiledOnes
-          .map(_.sparkPlan.veFunction)
-          .collect { case veF @ VeFunction(sc @ SourceCode(code), _, _) =>
-            sc
-          }
-          .toSet
-
-        logger.info(s"Found ${uncompiledCodes.size} codes uncompiled")
-
-        val compiled: Map[SourceCode, Path] = uncompiledCodes.toList.par
-          .map { sourceCode =>
-            sourceCode -> SparkCycloneDriverPlugin.currentCompiler.forCode(sourceCode.sourceCode)
-          }
-          .toMap
-          .toList
-          .toMap
-        logger.info(s"Compiled ${compiled.size} codes")
-
-        val result = plan.transformUp { case UncompiledPlan(plan) =>
-          plan.sparkPlan.updateVeFunction {
-            case f @ VeFunction(source @ SourceCode(_), functionName, results)
-                if compiled.contains(source) =>
-              f.copy(veFunctionStatus = VeFunctionStatus.Compiled(compiled(source).toString))
-            case other => other
-          }
-        }
-        logger.info(s"Transformed functions to compiled status")
-        result
-      } else plan
-    }
-  }
+  def compilerRule(sparkSession: SparkSession): ColumnarRule = ParallelCompilationColumnarRule
 }
 
 final class LocalVeoExtension extends (SparkSessionExtensions => Unit) with Logging {
