@@ -414,10 +414,11 @@ final case class VERewriteStrategy(
                 .map { case (veType, i) =>
                   import org.apache.spark.sql.catalyst.expressions._
                   // quick hack before doing something more proper
-                  PrettyAttribute(
+                  AttributeReference(
                     s"${veType}_${i}",
-                    SparkExpressionToCExpression.likelySparkType(veType)
-                  )
+                    SparkExpressionToCExpression.likelySparkType(veType),
+                    nullable = true
+                  )()
                 }
             )
             val flt = VeFlattenPartition(
