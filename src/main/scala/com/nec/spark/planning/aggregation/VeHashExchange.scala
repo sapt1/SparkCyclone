@@ -16,7 +16,7 @@ case class VeHashExchange(exchangeFunction: VeFunction, child: SparkPlan)
   with SupportsVeColBatch
   with Logging
   with PlanCallsVeFunction {
-
+  override protected def withNewChildInternal(newChild: SparkPlan): SparkPlan = copy(child = newChild)
   import com.nec.spark.SparkCycloneExecutorPlugin.veProcess
   override def executeVeColumnar(): RDD[VeColBatch] = child
     .asInstanceOf[SupportsVeColBatch]

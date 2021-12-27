@@ -54,4 +54,6 @@ case class VeFinalAggregate(
 
   override def updateVeFunction(f: VeFunction => VeFunction): SparkPlan =
     copy(finalFunction = f(finalFunction))
+
+  override protected def withNewChildInternal(newChild: SparkPlan): SparkPlan = copy(child = newChild)
 }

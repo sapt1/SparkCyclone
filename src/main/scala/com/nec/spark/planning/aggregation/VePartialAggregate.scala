@@ -21,7 +21,7 @@ case class VePartialAggregate(
     expectedOutputs.size == partialFunction.results.size,
     s"Expected outputs ${expectedOutputs.size} to match final function results size, but got ${partialFunction.results.size}"
   )
-
+  override protected def withNewChildInternal(newChild: SparkPlan): SparkPlan = copy(child = newChild)
   override def executeVeColumnar(): RDD[VeColBatch] = child
     .asInstanceOf[SupportsVeColBatch]
     .executeVeColumnar()

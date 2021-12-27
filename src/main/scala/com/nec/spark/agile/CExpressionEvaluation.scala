@@ -72,7 +72,7 @@ object CExpressionEvaluation {
             sys.error(s"Could not find a reference for '${expression}' from set of: ${input}")
           case idx => s"input_${idx}->data[i]"
         }
-      case Cast(child, dataType, _) =>
+      case Cast(child, dataType, _, _) =>
         val expr = evaluateExpression(input, child)
         dataType match {
           case ShortType   => s"((int16_t)$expr)"
@@ -105,7 +105,7 @@ object CExpressionEvaluation {
         s"${evaluateSub(inputs, left)} + ${evaluateSub(inputs, right)}"
       case Divide(left, right, _) =>
         s"${evaluateSub(inputs, left)} / ${evaluateSub(inputs, right)}"
-      case Abs(v) =>
+      case Abs(v, _) =>
         s"abs(${evaluateSub(inputs, v)})"
       case Literal(v, DoubleType | FloatType | LongType | IntegerType | DateType | ShortType) =>
         s"$v"
@@ -119,7 +119,7 @@ object CExpressionEvaluation {
         s"${evaluateSub(inputs, left)} > ${evaluateSub(inputs, right)}"
       case LessThanOrEqual(left, right) =>
         s"${evaluateSub(inputs, left)} < ${evaluateSub(inputs, right)}"
-      case Cast(child, dataType, _) =>
+      case Cast(child, dataType, _, _) =>
         dataType match {
           case LongType    => s"((int64_t)${evaluateSub(inputs, child)})"
           case IntegerType => s"((int32_t)${evaluateSub(inputs, child)})";

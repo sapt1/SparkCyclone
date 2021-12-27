@@ -31,7 +31,7 @@ case class VectorEngineToSparkPlan(override val child: SparkPlan)
         }
     )
   }
-
+  override protected def withNewChildInternal(newChild: SparkPlan): SparkPlan = copy(child = newChild)
   override protected def doExecuteColumnar(): RDD[ColumnarBatch] = {
 
     val tcpDebug = ScalaTcpDebug(VeCompilerConfig.fromSparkConf(sparkContext.getConf))

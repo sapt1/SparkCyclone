@@ -42,7 +42,7 @@ final case class ProjectEvaluationPlan(
   with LazyLogging
   with SupportsVeColBatch
   with PlanCallsVeFunction {
-
+  override protected def withNewChildInternal(newChild: SparkPlan): SparkPlan = copy(child = newChild)
   require(outputExpressions.nonEmpty, "Expected OutputExpressions to be non-empty")
 
   override def updateVeFunction(f: VeFunction => VeFunction): SparkPlan =

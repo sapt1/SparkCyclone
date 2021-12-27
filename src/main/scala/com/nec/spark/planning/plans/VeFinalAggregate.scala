@@ -16,7 +16,6 @@ case class VeFinalAggregate(
   with SupportsVeColBatch
   with LazyLogging
   with PlanCallsVeFunction {
-
   require(
     expectedOutputs.size == finalFunction.results.size,
     s"Expected outputs ${expectedOutputs.size} to match final function results size, but got ${finalFunction.results.size}"
@@ -54,4 +53,6 @@ case class VeFinalAggregate(
 
   override def updateVeFunction(f: VeFunction => VeFunction): SparkPlan =
     copy(finalFunction = f(finalFunction))
+
+  override protected def withNewChildInternal(newChild: SparkPlan): SparkPlan = copy(child = newChild)
 }

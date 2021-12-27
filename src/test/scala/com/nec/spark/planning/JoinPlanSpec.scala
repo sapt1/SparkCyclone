@@ -153,6 +153,11 @@ object JoinPlanSpec {
       }
     }
     override def output: Seq[Attribute] = left.output.takeRight(1) ++ right.output.takeRight(1)
+
+    override protected def withNewChildrenInternal(
+      newLeft: SparkPlan,
+      newRight: SparkPlan
+    ): SparkPlan = copy(left = newLeft, right = newRight)
   }
 
   final case class TestingOUR(joinMethod: JoinMethod) extends Testing {

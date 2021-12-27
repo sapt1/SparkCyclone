@@ -91,7 +91,7 @@ object RunBenchmarksApp extends IOApp {
         Network[IO].serverResource(address = Host.fromString("0.0.0.0")).use {
           case (logbackIpAddr, logbackStreamOfSockets) =>
             def runProc(_stdout: String => IO[Unit], _stderr: String => IO[Unit]) = IO.blocking {
-              val sparkHome = "/opt/spark"
+              val sparkHome = _root_.scala.sys.env.getOrElse("SPARK_HOME", "/opt/spark")
               import scala.sys.process._
 
               val tempFileLocation = Files.createTempFile(

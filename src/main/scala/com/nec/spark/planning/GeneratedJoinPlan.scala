@@ -175,4 +175,9 @@ case class GeneratedJoinPlan(
         }
       }
   }
+
+  override protected def withNewChildrenInternal(
+    newLeft: SparkPlan,
+    newRight: SparkPlan
+  ): SparkPlan = copy(leftNode = newLeft, rightNode = newRight)
 }

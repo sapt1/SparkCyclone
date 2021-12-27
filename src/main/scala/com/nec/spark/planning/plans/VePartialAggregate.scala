@@ -54,4 +54,5 @@ case class VePartialAggregate(
 
   override def updateVeFunction(f: VeFunction => VeFunction): SparkPlan =
     copy(partialFunction = f(partialFunction))
+  override protected def withNewChildInternal(newChild: SparkPlan): SparkPlan = copy(child = newChild)
 }

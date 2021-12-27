@@ -14,6 +14,7 @@ case class VeFlattenPartition(flattenFunction: VeFunction, child: SparkPlan)
   with SupportsVeColBatch
   with Logging
   with PlanCallsVeFunction {
+  override protected def withNewChildInternal(newChild: SparkPlan): SparkPlan = copy(child = newChild)
 
   require(
     output.size == flattenFunction.results.size,

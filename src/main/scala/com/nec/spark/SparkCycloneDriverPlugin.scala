@@ -32,7 +32,6 @@ import java.nio.file.Files
 import com.nec.ve.VeKernelCompiler
 import com.nec.ve.VeKernelCompiler.FileAttributes
 import com.typesafe.scalalogging.LazyLogging
-import okio.ByteString
 
 object SparkCycloneDriverPlugin {
   // For assumption testing purposes only for now
@@ -43,16 +42,6 @@ object SparkCycloneDriverPlugin {
 class SparkCycloneDriverPlugin extends DriverPlugin with LazyLogging {
 
   private[spark] var nativeCompiler: NativeCompiler = _
-  override def receive(message: Any): AnyRef = {
-    message match {
-      case RequestCompiledLibraryForCode(code) =>
-        logger.debug(s"Received request for compiled code: '${code}'")
-        val localLocation = nativeCompiler.forCode(code)
-        logger.info(s"Local compiled location = '${localLocation}'")
-        RequestCompiledLibraryResponse(ByteString.of(Files.readAllBytes(localLocation): _*))
-      case other => super.receive(message)
-    }
-  }
 
   override def init(
     sc: SparkContext,

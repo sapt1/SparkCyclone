@@ -40,7 +40,7 @@ import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, Sort}
 import org.apache.spark.sql.catalyst.plans.physical.HashPartitioning
 import org.apache.spark.sql.execution.{FilterExec, SparkPlan}
 import org.apache.spark.sql.execution.columnar.InMemoryRelation
-import org.apache.spark.sql.execution.exchange.{REPARTITION, ShuffleExchangeExec}
+import org.apache.spark.sql.execution.exchange.{ENSURE_REQUIREMENTS, ShuffleExchangeExec}
 import org.apache.spark.sql.types.StringType
 import org.apache.spark.sql.{SparkSession, Strategy}
 
@@ -395,7 +395,7 @@ final case class VERewriteStrategy(
                     outputPartitioning =
                       HashPartitioning(expressions = groupingExpressions, numPartitions = 8),
                     child = planLater(child),
-                    shuffleOrigin = REPARTITION
+                    shuffleOrigin = ENSURE_REQUIREMENTS
                   )
                 )
             val pag = VePartialAggregate(
