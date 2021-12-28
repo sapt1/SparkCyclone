@@ -19,22 +19,14 @@
  */
 package com.nec.spark.agile
 
-import com.nec.spark.agile.CExpressionEvaluation.CodeLines
 import com.nec.spark.agile.CFunctionGeneration._
 import com.nec.spark.agile.SparkExpressionToCExpression.EvalFallback
 import com.nec.spark.agile.SparkExpressionToCExpression.EvaluationAttempt._
-import org.apache.spark.sql.catalyst.expressions.aggregate.{
-  AggregateExpression,
-  DeclarativeAggregate
-}
-import org.apache.spark.sql.catalyst.expressions.{
-  Alias,
-  AttributeReference,
-  Expression,
-  LeafExpression,
-  Literal,
-  Unevaluable
-}
+import com.nec.ve.Aggregation.{DelegatingAggregation, SuffixedAggregation}
+import com.nec.ve.CVector.CScalarVector
+import com.nec.ve.{Aggregation, CodeLines}
+import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, DeclarativeAggregate}
+import org.apache.spark.sql.catalyst.expressions.{Alias, AttributeReference, Expression, LeafExpression, Literal, Unevaluable}
 import org.apache.spark.sql.types.DataType
 
 /**

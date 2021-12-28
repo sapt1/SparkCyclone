@@ -1,8 +1,7 @@
 package com.nec.spark.agile
 
-import com.nec.spark.agile.CExpressionEvaluation.CodeLines
 import com.nec.spark.agile.CFunction2.CFunctionArgument
-import com.nec.spark.agile.CFunctionGeneration.CVector
+import com.nec.ve.{CVector, CodeLines}
 
 object CFunction2 {
   sealed trait CFunctionArgument {

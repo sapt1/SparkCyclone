@@ -20,9 +20,10 @@
 package com.nec.spark.agile.groupby
 
 import com.nec.cmake.TcpDebug
-import com.nec.spark.agile.CExpressionEvaluation.CodeLines
-import com.nec.spark.agile.CFunctionGeneration.{Aggregation, CFunction, VeScalarType}
 import com.nec.spark.agile.groupby.GroupByOutline.StagedAggregation
+import com.nec.ve.CodeLines.{initializeScalarVector, storeTo}
+import com.nec.ve.VeType.VeScalarType
+import com.nec.ve.{Aggregation, CFunction, CodeLines}
 
 /**
  * In a staged group by, the final stage only needs the information on Aggregations,
@@ -63,7 +64,7 @@ final case class GroupByPartialToFinalGenerator(
     CodeLines
       .from(
         CodeLines.debugHere,
-        GroupByOutline.initializeScalarVector(
+        initializeScalarVector(
           veScalarType = sa.finalType.asInstanceOf[VeScalarType],
           variableName = sa.name,
           countExpression = groupingCodeGenerator.groupsCountOutName
@@ -73,7 +74,7 @@ final case class GroupByPartialToFinalGenerator(
           beforeFirst = aggregation.initial(sa.name),
           perItem = aggregation.merge(sa.name, s"partial_${sa.name}"),
           afterLast =
-            CodeLines.from(GroupByOutline.storeTo(sa.name, aggregation.fetch(sa.name), "g"))
+            CodeLines.from(storeTo(sa.name, aggregation.fetch(sa.name), "g"))
         )
       )
       .time(s"Staged Aggregation ${sa.name}")

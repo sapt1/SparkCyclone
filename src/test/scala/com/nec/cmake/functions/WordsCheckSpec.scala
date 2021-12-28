@@ -5,9 +5,8 @@ import com.nec.arrow.TransferDefinitions.TransferDefinitionsSourceCode
 import com.nec.arrow.{ArrowVectorBuilders, CArrowNativeInterface, WithTestAllocator}
 import com.nec.cmake.CMakeBuilder
 import com.nec.util.RichVectors._
-import com.nec.spark.agile.CExpressionEvaluation.CodeLines
-import com.nec.spark.agile.CFunctionGeneration.{CFunction, CVector}
 import com.nec.spark.agile.StringProducer.FrovedisCopyStringProducer
+import com.nec.ve.{CFunction, CVector, CodeLines}
 import org.scalacheck.{Gen, Prop}
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatestplus.scalacheck.Checkers

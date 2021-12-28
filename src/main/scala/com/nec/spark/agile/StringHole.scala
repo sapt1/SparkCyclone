@@ -19,30 +19,12 @@
  */
 package com.nec.spark.agile
 
-import com.nec.spark.agile.CExpressionEvaluation.CodeLines
 import com.nec.spark.agile.CFunctionGeneration.CExpression
 import com.nec.spark.agile.StringHole.StringHoleEvaluation
-import com.nec.spark.agile.StringHole.StringHoleEvaluation.SlowEvaluator.{
-  NotNullEvaluator,
-  SlowEvaluator
-}
-import com.nec.spark.agile.StringHole.StringHoleEvaluation.{
-  LikeStringHoleEvaluation,
-  SlowEvaluation,
-  SlowEvaluator
-}
-import org.apache.spark.sql.catalyst.expressions.{
-  AttributeReference,
-  Contains,
-  EndsWith,
-  EqualTo,
-  Expression,
-  IsNotNull,
-  LeafExpression,
-  Literal,
-  StartsWith,
-  Unevaluable
-}
+import com.nec.spark.agile.StringHole.StringHoleEvaluation.SlowEvaluator.{NotNullEvaluator, SlowEvaluator}
+import com.nec.spark.agile.StringHole.StringHoleEvaluation.{LikeStringHoleEvaluation, SlowEvaluation, SlowEvaluator}
+import com.nec.ve.CodeLines
+import org.apache.spark.sql.catalyst.expressions.{AttributeReference, Contains, EndsWith, EqualTo, Expression, IsNotNull, LeafExpression, Literal, StartsWith, Unevaluable}
 import org.apache.spark.sql.types.{DataType, StringType}
 
 /**

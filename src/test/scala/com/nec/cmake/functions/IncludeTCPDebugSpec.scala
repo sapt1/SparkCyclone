@@ -20,7 +20,7 @@
 package com.nec.cmake.functions
 
 import com.nec.cmake.{CMakeBuilder, TcpDebug}
-import com.nec.spark.agile.CExpressionEvaluation.CodeLines
+import com.nec.ve.CodeLines
 import org.scalatest.freespec.AnyFreeSpec
 
 final class IncludeTCPDebugSpec extends AnyFreeSpec {

@@ -19,10 +19,10 @@
  */
 package com.nec.cmake.eval
 
-import com.nec.spark.agile.CExpressionEvaluation.CodeLines
-import com.nec.spark.agile.CFunctionGeneration.{Aggregation, CExpression}
+import com.nec.spark.agile.CFunctionGeneration.CExpression
 import com.nec.spark.agile.DeclarativeAggregationConverter
 import com.nec.spark.agile.SparkExpressionToCExpression.EvalFallback
+import com.nec.ve.{Aggregation, CodeLines}
 import org.apache.spark.sql.catalyst.expressions.aggregate.{
   AggregateExpression,
   Average,

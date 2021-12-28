@@ -23,12 +23,11 @@ import com.typesafe.scalalogging.LazyLogging
 
 import java.nio.file.Paths
 import com.nec.cmake.CMakeBuilder
-import com.nec.spark.agile.CExpressionEvaluation.CodeLines
 import org.apache.spark.SparkConf
 
 import java.nio.file.Files
 import java.nio.file.Path
-import com.nec.ve.VeKernelCompiler
+import com.nec.ve.{CodeLines, VeKernelCompiler}
 import com.nec.ve.VeKernelCompiler.{FileAttributes, VeCompilerConfig}
 
 trait NativeCompiler extends Serializable {

@@ -22,7 +22,7 @@ package com.nec.tpc
 import com.eed3si9n.expecty.Expecty.expect
 import com.nec.cmake.DynamicCSqlExpressionEvaluationSpec
 import com.nec.spark.SparkAdditions
-import com.nec.spark.agile.CFunctionGeneration.CFunction
+import com.nec.ve.CFunction
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{Dataset, SparkSession}

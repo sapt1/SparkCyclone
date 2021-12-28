@@ -20,13 +20,13 @@
 package com.nec.cmake.eval
 
 import com.nec.arrow.ArrowNativeInterface.NativeArgument
-import com.nec.arrow.ArrowNativeInterface.NativeArgument.{
-  VectorInputNativeArgument,
-  VectorOutputNativeArgument
-}
+import com.nec.arrow.ArrowNativeInterface.NativeArgument.{VectorInputNativeArgument, VectorOutputNativeArgument}
 import com.nec.util.RichVectors._
 import com.nec.spark.agile.CFunctionGeneration._
 import com.nec.spark.agile.StringProducer
+import com.nec.ve.CVector
+import com.nec.ve.CVector.{CScalarVector, CVarChar}
+import com.nec.ve.VeType.VeScalarType
 import org.apache.arrow.memory.RootAllocator
 import org.apache.arrow.vector.{Float8Vector, VarCharVector}
 
@@ -271,7 +271,7 @@ object StaticTypingTestAdditions {
   object OutputArguments {
     implicit val forOptionDouble: OutputArguments[Option[Double]] =
       new OutputArguments[Option[Double]] {
-        override type Result = (Option[Double])
+        override type Result = Option[Double]
         override def allocateVectors()(implicit
                                        rootAllocator: RootAllocator
         ): (List[VectorOutputNativeArgument], () => List[Result]) = {

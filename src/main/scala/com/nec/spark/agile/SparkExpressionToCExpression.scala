@@ -20,7 +20,8 @@
 package com.nec.spark.agile
 
 import com.nec.spark.agile.CFunctionGeneration._
-
+import com.nec.ve.VeType
+import com.nec.ve.VeType.{VeScalarType, VeString}
 import org.apache.spark.sql.catalyst.expressions
 import org.apache.spark.sql.catalyst.expressions.aggregate.NoOp
 import org.apache.spark.sql.catalyst.expressions.{
@@ -31,10 +32,7 @@ import org.apache.spark.sql.catalyst.expressions.{
   CaseWhen,
   Cast,
   Coalesce,
-  Contains,
   Divide,
-  EndsWith,
-  EqualTo,
   ExprId,
   Expression,
   Greatest,
@@ -47,12 +45,9 @@ import org.apache.spark.sql.catalyst.expressions.{
   Literal,
   Not,
   SortDirection,
-  SortOrder,
-  Sqrt,
-  StartsWith
+  Sqrt
 }
 import org.apache.spark.sql.catalyst.optimizer.NormalizeNaNAndZero
-import org.apache.spark.sql.catalyst.plans.logical.Sort
 import org.apache.spark.sql.types._
 import org.apache.spark.unsafe.types.UTF8String
 

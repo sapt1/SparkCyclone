@@ -19,9 +19,9 @@
  */
 package com.nec.spark.planning
 
-import com.nec.spark.agile.CExpressionEvaluation.CodeLines
 import com.nec.spark.agile.CFunctionGeneration
-import com.nec.spark.agile.CFunctionGeneration.{CFunction, VeString}
+import com.nec.ve.{CFunction, CVector, CodeLines}
+import com.nec.ve.VeType.VeString
 import org.apache.arrow.memory.BufferAllocator
 import org.apache.arrow.vector.util.Text
 import org.apache.arrow.vector.{ValueVector, VarCharVector}
@@ -33,7 +33,7 @@ object Tracer {
   val TracerDefName = "TRACER"
   val TracerName = "tracer"
   val DefineTracer: CodeLines = CodeLines.from(s"#define ${TracerDefName} ${TracerName}")
-  val TracerVector: CFunctionGeneration.CVector = VeString.makeCVector(TracerName)
+  val TracerVector: CVector = VeString.makeCVector(TracerName)
   def includeInFunction(cFunctionNaked: CFunction): CFunction = {
     cFunctionNaked.copy(inputs = TracerVector :: cFunctionNaked.inputs)
   }

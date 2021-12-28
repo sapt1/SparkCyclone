@@ -1,7 +1,7 @@
 package com.nec.spark.planning
 
-import com.nec.spark.agile.CFunctionGeneration.VeType
 import com.nec.spark.planning.VeFunction.VeFunctionStatus
+import com.nec.ve.VeType
 
 object VeFunction {
   sealed trait VeFunctionStatus

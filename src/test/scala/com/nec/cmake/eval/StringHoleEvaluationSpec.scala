@@ -5,14 +5,14 @@ import com.nec.arrow.ArrowNativeInterface.SupportedVectorWrapper
 import com.nec.arrow.TransferDefinitions.TransferDefinitionsSourceCode
 import com.nec.arrow.{ArrowVectorBuilders, CArrowNativeInterface, WithTestAllocator}
 import com.nec.cmake.CMakeBuilder
-import com.nec.util.RichVectors.RichIntVector
-import com.nec.spark.agile.CExpressionEvaluation.CodeLines
-import com.nec.spark.agile.CFunctionGeneration.{CFunction, CVector, VeScalarType}
 import com.nec.spark.agile.StringHole
 import com.nec.spark.agile.StringHole.StringHoleEvaluation
 import com.nec.spark.agile.StringHole.StringHoleEvaluation.SlowEvaluator.SlowEvaluator
 import com.nec.spark.agile.StringHole.StringHoleEvaluation.{LikeStringHoleEvaluation, SlowEvaluator}
-import com.nec.spark.agile.groupby.GroupByOutline
+import com.nec.util.RichVectors.RichIntVector
+import com.nec.ve.CodeLines.{initializeScalarVector, storeTo}
+import com.nec.ve.VeType.VeScalarType
+import com.nec.ve.{CFunction, CVector, CodeLines}
 import org.scalatest.freespec.AnyFreeSpec
 
 final class StringHoleEvaluationSpec extends AnyFreeSpec {
@@ -98,11 +98,10 @@ object StringHoleEvaluationSpec {
           outputs = List(CVector.int("bools")),
           body = CodeLines.from(
             stringHoleEvaluation.computeVector,
-            GroupByOutline
-              .initializeScalarVector(VeScalarType.veNullableInt, "bools", "strings->count"),
+              initializeScalarVector(VeScalarType.veNullableInt, "bools", "strings->count"),
             CodeLines.from(
               "for ( int i = 0; i < strings->count; i++ ) { ",
-              GroupByOutline.storeTo("bools", stringHoleEvaluation.fetchResult, "i").indented,
+              storeTo("bools", stringHoleEvaluation.fetchResult, "i").indented,
               "}"
             ),
             stringHoleEvaluation.deallocData,

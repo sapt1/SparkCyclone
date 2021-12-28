@@ -24,7 +24,7 @@ import com.nec.arrow.TransferDefinitions.TransferDefinitionsSourceCode
 import com.nec.arrow.{CArrowNativeInterface, WithTestAllocator}
 import com.nec.cmake.CMakeBuilder
 import com.nec.util.RichVectors.RichBigIntVector
-import com.nec.spark.agile.CExpressionEvaluation.CodeLines
+import com.nec.ve.CodeLines
 import org.apache.arrow.vector.BigIntVector
 import org.scalatest.freespec.AnyFreeSpec
 

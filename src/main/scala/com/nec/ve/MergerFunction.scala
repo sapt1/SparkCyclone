@@ -1,15 +1,9 @@
 package com.nec.ve
 
-import com.nec.spark.agile.CExpressionEvaluation.CodeLines
 import com.nec.spark.agile.CFunction2
 import com.nec.spark.agile.CFunction2.CFunctionArgument
-import com.nec.spark.agile.CFunctionGeneration.{VeScalarType, VeString, VeType}
-import com.nec.spark.agile.StringProducer.{
-  FilteringProducer,
-  FrovedisCopyStringProducer,
-  ImpCopyStringProducer
-}
-import com.nec.spark.agile.groupby.GroupByOutline
+import com.nec.ve.CodeLines.{declare, initializeScalarVector}
+import com.nec.ve.VeType.{VeScalarType, VeString}
 
 object MergerFunction {
 
@@ -28,7 +22,7 @@ object MergerFunction {
       CodeLines.from(
         CodeLines.debugValue(s"$idx", "batches", "rows"),
         CodeLines.debugHere,
-        GroupByOutline.declare(veT.makeCVector(outputVarName)),
+        declare(veT.makeCVector(outputVarName)),
         CodeLines.debugHere,
         s"${outputVarName}_g[0] = ${outputVarName};",
         veT match {
@@ -51,7 +45,7 @@ object MergerFunction {
           case veScalarType: VeScalarType =>
             CodeLines
               .from(
-                GroupByOutline.initializeScalarVector(veScalarType, outputVarName, "rows"),
+                initializeScalarVector(veScalarType, outputVarName, "rows"),
                 "int o = 0;",
                 CodeLines.forLoop("b", "batches") {
                   val inputInBatch = s"input_${idx}_g[b]"

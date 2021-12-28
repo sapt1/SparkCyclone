@@ -25,29 +25,21 @@ import com.eed3si9n.expecty.Expecty.expect
 import com.nec.arrow.ArrowNativeInterface.NativeArgument
 import com.nec.arrow.ArrowNativeInterface.NativeArgument.VectorInputNativeArgument
 import com.nec.arrow.ArrowNativeInterface.NativeArgument.VectorInputNativeArgument.InputVectorWrapper.InputArrowVectorWrapper
-import com.nec.arrow.ArrowVectorBuilders.{
-  withArrowStringVector,
-  withDirectBigIntVector,
-  withDirectFloat8Vector,
-  withDirectIntVector,
-  withNullableArrowStringVector
-}
+import com.nec.arrow.ArrowVectorBuilders.{withArrowStringVector, withDirectBigIntVector, withDirectFloat8Vector, withDirectIntVector, withNullableArrowStringVector}
 import com.nec.arrow.TransferDefinitions.TransferDefinitionsSourceCode
 import com.nec.arrow.{CArrowNativeInterface, CatsArrowVectorBuilders, WithTestAllocator}
 import com.nec.cmake.CMakeBuilder
 import com.nec.cmake.eval.StaticTypingTestAdditions._
 import com.nec.util.RichVectors.{RichBigIntVector, RichFloat8, RichIntVector, RichVarCharVector}
-import com.nec.spark.agile.CExpressionEvaluation.CodeLines
-import com.nec.spark.agile.CFunctionGeneration.GroupByExpression.{
-  GroupByAggregation,
-  GroupByProjection
-}
+import com.nec.spark.agile.CFunctionGeneration.GroupByExpression.{GroupByAggregation, GroupByProjection}
 import com.nec.spark.agile.CFunctionGeneration.JoinExpression.JoinProjection
 import com.nec.spark.agile.CFunctionGeneration.{TypedGroupByExpression, _}
 import com.nec.spark.agile.{CppResource, DeclarativeAggregationConverter, StringProducer}
 import com.nec.spark.agile.SparkExpressionToCExpression.EvalFallback
 import com.nec.spark.agile.StringProducer.ImperativeStringProducer
 import com.nec.spark.planning.Tracer
+import com.nec.ve.{Aggregation, CVector, CodeLines}
+import com.nec.ve.VeType.VeScalarType
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.sql.catalyst.expressions.AttributeReference
 import org.apache.spark.sql.catalyst.expressions.aggregate.{Average, Corr, Sum}
@@ -461,6 +453,7 @@ final class RealExpressionEvaluationSpec extends AnyFreeSpec {
       (11.0, 7.0, 12.0, 11.0),
       (8.0, 2.0, 3.0, 9.0)
     )
+
     val leftKey =
       TypedCExpression2(VeScalarType.VeNullableDouble, CExpression("input_0->data[i]", None))
 

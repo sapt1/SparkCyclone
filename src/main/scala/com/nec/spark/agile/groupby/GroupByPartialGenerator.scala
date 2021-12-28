@@ -20,18 +20,18 @@
 package com.nec.spark.agile.groupby
 
 import com.nec.cmake.TcpDebug
-import com.nec.spark.agile.CExpressionEvaluation.CodeLines
-import com.nec.spark.agile.CFunctionGeneration.{Aggregation, CFunction, CVector, TypedCExpression2}
+import com.nec.spark.agile.CFunctionGeneration.TypedCExpression2
 import com.nec.spark.agile.StringHole.StringHoleEvaluation
 import com.nec.spark.agile.StringProducer
 import com.nec.spark.agile.StringProducer.FilteringProducer
 import com.nec.spark.agile.groupby.GroupByOutline.{
-  storeTo,
   GroupingKey,
   StagedAggregation,
   StagedProjection,
   StringReference
 }
+import com.nec.ve.CodeLines.{dealloc, declare, initializeScalarVector, storeTo}
+import com.nec.ve.{Aggregation, CFunction, CVector, CodeLines}
 
 final case class GroupByPartialGenerator(
   finalGenerator: GroupByPartialToFinalGenerator,
@@ -52,11 +52,11 @@ final case class GroupByPartialGenerator(
         CodeLines.commentHere(
           "Declare the variables for the output of the Partial stage for the unified function"
         ),
-        partialFunction.outputs.map(cv => GroupByOutline.declare(cv)),
+        partialFunction.outputs.map(cv => declare(cv)),
         partialFunction.body.blockCommented("Perform the Partial computation stage"),
         finalFunction.body.blockCommented("Perform the Final computation stage"),
         partialFunction.outputs
-          .map(cv => GroupByOutline.dealloc(cv))
+          .map(cv => dealloc(cv))
           .blockCommented("Deallocate the partial variables")
       )
     )
@@ -107,14 +107,13 @@ final case class GroupByPartialGenerator(
     case Right(TypedCExpression2(veType, cExpression)) =>
       CodeLines.from(
         CodeLines.debugHere,
-        GroupByOutline
-          .initializeScalarVector(
-            veType,
-            s"partial_${stagedProjection.name}",
-            groupingCodeGenerator.groupsCountOutName
-          ),
+        initializeScalarVector(
+          veType,
+          s"partial_${stagedProjection.name}",
+          groupingCodeGenerator.groupsCountOutName
+        ),
         groupingCodeGenerator.forHeadOfEachGroup(
-          GroupByOutline.storeTo(s"partial_${stagedProjection.name}", cExpression, "g")
+          storeTo(s"partial_${stagedProjection.name}", cExpression, "g")
         )
       )
   }
@@ -127,7 +126,7 @@ final case class GroupByPartialGenerator(
     CodeLines.from(
       CodeLines.debugHere,
       stagedAggregation.attributes.map(attribute =>
-        GroupByOutline.initializeScalarVector(
+        initializeScalarVector(
           veScalarType = attribute.veScalarType,
           variableName = s"partial_${attribute.name}",
           countExpression = groupingCodeGenerator.groupsCountOutName
@@ -140,7 +139,7 @@ final case class GroupByPartialGenerator(
         afterLast =
           CodeLines.from(stagedAggregation.attributes.zip(aggregate.partialValues(prefix)).map {
             case (attr, (_, ex)) =>
-              CodeLines.from(GroupByOutline.storeTo(s"partial_${attr.name}", ex, "g"))
+              CodeLines.from(storeTo(s"partial_${attr.name}", ex, "g"))
           })
       )
     )
@@ -161,7 +160,7 @@ final case class GroupByPartialGenerator(
     val initVars = computedGroupingKeys.map {
       case (groupingKey, Right(TypedCExpression2(scalarType, cExp))) =>
         ProductionTriplet(
-          init = GroupByOutline.initializeScalarVector(
+          init = initializeScalarVector(
             veScalarType = scalarType,
             variableName = s"partial_${groupingKey.name}",
             countExpression = groupingCodeGenerator.groupsCountOutName

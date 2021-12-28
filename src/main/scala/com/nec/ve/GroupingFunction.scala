@@ -1,13 +1,12 @@
 package com.nec.ve
 
-import com.nec.spark.agile.CExpressionEvaluation.CodeLines
 import com.nec.spark.agile.CFunction2.CFunctionArgument
 import com.nec.spark.agile.CFunction2.CFunctionArgument.PointerPointer
-import com.nec.spark.agile.CFunctionGeneration.{CVector, VeScalarType, VeType}
-import com.nec.spark.agile.{CFunction2, CFunctionGeneration, StringProducer}
 import com.nec.spark.agile.groupby.GroupByOutline
-import com.nec.spark.agile.groupby.GroupByOutline.initializeScalarVector
+import com.nec.spark.agile.{CFunction2, CFunctionGeneration, StringProducer}
+import com.nec.ve.CodeLines.{initializeScalarVector, initializeStringVector}
 import com.nec.ve.GroupingFunction.DataDescription.KeyOrValue
+import com.nec.ve.VeType.{VeScalarType, VeString}
 
 object GroupingFunction {
 
@@ -116,7 +115,7 @@ object GroupingFunction {
                 CodeLines.from(
                   s"${output.name}[b] = (${output.veType.cVectorType}*)malloc(sizeof(${output.veType.cVectorType}));",
                   output.veType match {
-                    case CFunctionGeneration.VeString =>
+                    case VeString =>
                       val outName = s"${output.name}_current"
                       val fp =
                         StringProducer.FilteringProducer(
@@ -127,7 +126,7 @@ object GroupingFunction {
                         .from(
                           s"${output.veType.cVectorType} * $outName = ${output.name}[b];",
                           CodeLines.debugHere,
-                          GroupByOutline.initializeStringVector(outName),
+                          initializeStringVector(outName),
                           CodeLines.debugHere,
                           fp.setup,
                           CodeLines.debugHere,

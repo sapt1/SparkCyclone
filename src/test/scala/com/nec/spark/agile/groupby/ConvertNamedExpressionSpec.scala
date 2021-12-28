@@ -22,15 +22,9 @@ package com.nec.spark.agile.groupby
 import com.nec.spark.agile.SparkExpressionToCExpression.EvalFallback
 import org.scalatest.freespec.AnyFreeSpec
 import ConvertNamedExpression._
-import com.nec.spark.agile.CFunctionGeneration.VeScalarType
 import com.nec.spark.agile.groupby.GroupByOutline.StagedProjection
-import org.apache.spark.sql.catalyst.expressions.{
-  Alias,
-  Attribute,
-  AttributeReference,
-  ExprId,
-  PrettyAttribute
-}
+import com.nec.ve.VeType.VeScalarType
+import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, AttributeReference, ExprId, PrettyAttribute}
 import org.apache.spark.sql.types.DoubleType
 
 final class ConvertNamedExpressionSpec extends AnyFreeSpec {

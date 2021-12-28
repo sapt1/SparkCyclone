@@ -19,27 +19,16 @@
  */
 package com.nec.cmake.eval
 
-import com.nec.spark.agile.CExpressionEvaluation.CodeLines
-import com.nec.spark.agile.CFunctionGeneration.GroupByExpression.{
-  GroupByAggregation,
-  GroupByProjection
-}
+import com.nec.spark.agile.CFunctionGeneration.GroupByExpression.{GroupByAggregation, GroupByProjection}
 import com.nec.spark.agile.CFunctionGeneration._
 import com.nec.spark.agile.GroupingCodeGenerator
 import com.nec.spark.agile.StringProducer.CopyStringProducer
-import com.nec.spark.agile.groupby.GroupByOutline.{
-  GroupingKey,
-  StagedAggregation,
-  StagedAggregationAttribute,
-  StagedProjection,
-  StringReference
-}
-import com.nec.spark.agile.groupby.{
-  GroupByOutline,
-  GroupByPartialGenerator,
-  GroupByPartialToFinalGenerator
-}
+import com.nec.spark.agile.groupby.GroupByOutline.{GroupingKey, StagedAggregation, StagedAggregationAttribute, StagedProjection, StringReference}
+import com.nec.spark.agile.groupby.{GroupByOutline, GroupByPartialGenerator, GroupByPartialToFinalGenerator}
 import com.nec.spark.planning.VERewriteStrategy.SequenceList
+import com.nec.ve.CodeLines.{dealloc, declare}
+import com.nec.ve.VeType.VeString
+import com.nec.ve.{Aggregation, CFunction, CVector, CodeLines}
 
 final case class OldUnifiedGroupByFunctionGeneration(
   veDataTransformation: VeGroupBy[
@@ -142,11 +131,11 @@ final case class OldUnifiedGroupByFunctionGeneration(
         CodeLines.commentHere(
           "Declare the variables for the output of the Partial stage for the unified function"
         ),
-        pf.outputs.map(cv => GroupByOutline.declare(cv)),
+        pf.outputs.map(cv => declare(cv)),
         pf.body.blockCommented("Perform the Partial computation stage"),
         ff.body.blockCommented("Perform the Final computation stage"),
         pf.outputs
-          .map(cv => GroupByOutline.dealloc(cv))
+          .map(cv => dealloc(cv))
           .blockCommented("Deallocate the partial variables")
       )
     )

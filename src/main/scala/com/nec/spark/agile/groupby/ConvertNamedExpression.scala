@@ -19,29 +19,15 @@
  */
 package com.nec.spark.agile.groupby
 
-import com.nec.spark.agile.CFunctionGeneration.{Aggregation, GroupByExpression, TypedCExpression2}
+import com.nec.spark.agile.CFunctionGeneration.{GroupByExpression, TypedCExpression2}
 import com.nec.spark.agile.{DeclarativeAggregationConverter, SparkExpressionToCExpression}
-import com.nec.spark.agile.SparkExpressionToCExpression.{sparkTypeToVeType, EvalFallback}
-import com.nec.spark.agile.groupby.GroupByOutline.{
-  StagedAggregation,
-  StagedAggregationAttribute,
-  StagedProjection,
-  StringReference
-}
+import com.nec.spark.agile.SparkExpressionToCExpression.{EvalFallback, sparkTypeToVeType}
+import com.nec.spark.agile.groupby.GroupByOutline.{StagedAggregation, StagedAggregationAttribute, StagedProjection, StringReference}
 import com.nec.spark.planning.VERewriteStrategy
 import com.nec.spark.planning.VERewriteStrategy.{AggPrefix, StagedProjectionPrefix}
-import org.apache.spark.sql.catalyst.expressions.aggregate.{
-  AggregateExpression,
-  DeclarativeAggregate
-}
-import org.apache.spark.sql.catalyst.expressions.{
-  Alias,
-  Attribute,
-  AttributeReference,
-  Expression,
-  NamedExpression
-}
-import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
+import com.nec.ve.Aggregation
+import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, DeclarativeAggregate}
+import org.apache.spark.sql.catalyst.expressions.{Alias, Attribute, AttributeReference, Expression, NamedExpression}
 import org.apache.spark.sql.types.StringType
 
 /**

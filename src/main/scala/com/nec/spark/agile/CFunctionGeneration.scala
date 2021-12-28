@@ -19,25 +19,17 @@
  */
 package com.nec.spark.agile
 
-import com.nec.cmake.TcpDebug
-import com.nec.spark.agile.CExpressionEvaluation.CodeLines
-import com.nec.spark.agile.CFunctionGeneration.VeScalarType.{
-  VeNullableDouble,
-  VeNullableFloat,
-  VeNullableInt,
-  VeNullableLong
-}
 import com.nec.spark.agile.StringHole.StringHoleEvaluation
-import com.nec.spark.agile.StringProducer.{
-  FrovedisCopyStringProducer,
-  FrovedisStringProducer,
-  ImperativeStringProducer
-}
+import com.nec.spark.agile.StringProducer.{FrovedisCopyStringProducer, FrovedisStringProducer, ImperativeStringProducer}
 import com.nec.spark.agile.groupby.GroupByOutline
+import com.nec.ve.{Aggregation, CFunction, CVector, CodeLines}
+import com.nec.ve.CVector.{CScalarVector, CVarChar}
+import com.nec.ve.CodeLines.initializeScalarVector
+import com.nec.ve.VeType.VeScalarType.{VeNullableDouble, VeNullableFloat, VeNullableInt, VeNullableLong}
+import com.nec.ve.VeType.{VeScalarType, VeString}
 import org.apache.arrow.memory.BufferAllocator
-import org.apache.arrow.vector.{BigIntVector, FieldVector, Float8Vector, IntVector, VarCharVector}
-import org.apache.spark.sql.UserDefinedVeType
-import org.apache.spark.sql.types.{DataType, DateType, DoubleType, IntegerType, SQLUserDefinedType}
+import org.apache.arrow.vector._
+import org.apache.spark.sql.types.{DataType, DateType, DoubleType, IntegerType}
 
 /** Spark-free function evaluation */
 object CFunctionGeneration {
@@ -55,29 +47,6 @@ object CFunctionGeneration {
   trait SortOrdering
   final case object Descending extends SortOrdering
   final case object Ascending extends SortOrdering
-
-  sealed trait CVector {
-    def replaceName(search: String, replacement: String): CVector
-    def name: String
-    def veType: VeType
-  }
-  object CVector {
-    def varChar(name: String): CVector = CVarChar(name)
-    def double(name: String): CVector = CScalarVector(name, VeScalarType.veNullableDouble)
-    def int(name: String): CVector = CScalarVector(name, VeScalarType.veNullableInt)
-  }
-
-  final case class CVarChar(name: String) extends CVector {
-    override def veType: VeType = VeString
-
-    override def replaceName(search: String, replacement: String): CVector =
-      copy(name = name.replaceAllLiterally(search, replacement))
-  }
-
-  final case class CScalarVector(name: String, veType: VeScalarType) extends CVector {
-    override def replaceName(search: String, replacement: String): CVector =
-      copy(name = name.replaceAllLiterally(search, replacement))
-  }
 
   final case class CExpression(cCode: String, isNotNullCode: Option[String]) {
     def storeTo(outputName: String): CodeLines = isNotNullCode match {
@@ -115,81 +84,6 @@ object CFunctionGeneration {
     cExpression: CExpression
   )
   final case class NamedStringExpression(name: String, stringProducer: StringProducer)
-
-  @SQLUserDefinedType(udt = classOf[UserDefinedVeType])
-  sealed trait VeType {
-    def containerSize: Int
-    def isString: Boolean
-    def cVectorType: String
-    def makeCVector(name: String): CVector
-  }
-
-  object VeType {
-    val All: Set[VeType] = Set(VeString) ++ VeScalarType.All
-  }
-
-  case object VeString extends VeType {
-    override def cVectorType: String = "nullable_varchar_vector"
-
-    override def makeCVector(name: String): CVector = CVector.varChar(name)
-
-    override def isString: Boolean = true
-
-    override def containerSize: Int = 32
-  }
-
-  sealed trait VeScalarType extends VeType {
-    override def containerSize: Int = 20
-
-    def cScalarType: String
-
-    def cSize: Int
-
-    override def makeCVector(name: String): CVector = CScalarVector(name, this)
-
-    override def isString: Boolean = false
-  }
-
-  object VeScalarType {
-    val All: Set[VeScalarType] =
-      Set(VeNullableDouble, VeNullableFloat, VeNullableInt, VeNullableLong)
-    case object VeNullableDouble extends VeScalarType {
-
-      def cScalarType: String = "double"
-
-      def cVectorType: String = "nullable_double_vector"
-
-      override def cSize: Int = 8
-    }
-
-    case object VeNullableFloat extends VeScalarType {
-      def cScalarType: String = "float"
-
-      def cVectorType: String = "nullable_float_vector"
-
-      override def cSize: Int = 4
-    }
-
-    case object VeNullableInt extends VeScalarType {
-      def cScalarType: String = "int32_t"
-
-      def cVectorType: String = "nullable_int_vector"
-
-      override def cSize: Int = 4
-    }
-
-    case object VeNullableLong extends VeScalarType {
-      def cScalarType: String = "int64_t"
-
-      def cVectorType: String = "nullable_bigint_vector"
-
-      override def cSize: Int = 8
-    }
-
-    def veNullableDouble: VeScalarType = VeNullableDouble
-    def veNullableInt: VeScalarType = VeNullableInt
-    def veNullableLong: VeScalarType = VeNullableLong
-  }
 
   /**
    * The reason to use fully generic types is so that we can map them around in future, without having an implementation
@@ -272,140 +166,6 @@ object CFunctionGeneration {
     groupByExpression: GroupByExpression
   )
 
-  trait Aggregation extends Serializable {
-    def merge(prefix: String, inputPrefix: String): CodeLines
-    def initial(prefix: String): CodeLines
-    def partialValues(prefix: String): List[(CScalarVector, CExpression)]
-    def iterate(prefix: String): CodeLines
-    def compute(prefix: String): CodeLines
-    def fetch(prefix: String): CExpression
-    def free(prefix: String): CodeLines
-  }
-
-  final case class SuffixedAggregation(suffix: String, original: Aggregation) extends Aggregation {
-    override def initial(prefix: String): CodeLines = original.initial(s"$prefix$suffix")
-
-    override def iterate(prefix: String): CodeLines = original.iterate(s"$prefix$suffix")
-
-    override def compute(prefix: String): CodeLines = original.compute(s"$prefix$suffix")
-
-    override def fetch(prefix: String): CExpression = original.fetch(s"$prefix$suffix")
-
-    override def free(prefix: String): CodeLines = original.free(s"$prefix$suffix")
-
-    override def partialValues(prefix: String): List[(CScalarVector, CExpression)] =
-      original.partialValues(s"$prefix$suffix")
-
-    override def merge(prefix: String, inputPrefix: String): CodeLines =
-      original.merge(s"$prefix$suffix", s"$inputPrefix$suffix")
-  }
-
-  abstract class DelegatingAggregation(val original: Aggregation) extends Aggregation {
-    override def initial(prefix: String): CodeLines = original.initial(prefix)
-
-    override def iterate(prefix: String): CodeLines = original.iterate(prefix)
-
-    override def compute(prefix: String): CodeLines = original.compute(prefix)
-
-    override def fetch(prefix: String): CExpression = original.fetch(prefix)
-
-    override def free(prefix: String): CodeLines = original.free(prefix)
-
-    override def partialValues(prefix: String): List[(CScalarVector, CExpression)] =
-      original.partialValues(prefix)
-
-    override def merge(prefix: String, inputPrefix: String): CodeLines =
-      original.merge(prefix, inputPrefix)
-  }
-
-  object Aggregation {
-    def sum(cExpression: CExpression): Aggregation = new Aggregation {
-      override def initial(prefix: String): CodeLines =
-        CodeLines.from(s"double ${prefix}_aggregate_sum = 0;")
-
-      override def iterate(prefix: String): CodeLines =
-        cExpression.isNotNullCode match {
-          case None =>
-            CodeLines.from(s"${prefix}_aggregate_sum += ${cExpression.cCode};")
-          case Some(notNullCheck) =>
-            CodeLines.from(
-              s"if ( ${notNullCheck} ) {",
-              CodeLines.from(s"${prefix}_aggregate_sum += ${cExpression.cCode};").indented,
-              "}"
-            )
-        }
-
-      override def fetch(prefix: String): CExpression =
-        CExpression(s"${prefix}_aggregate_sum", None)
-
-      override def free(prefix: String): CodeLines = CodeLines.empty
-
-      override def compute(prefix: String): CodeLines = CodeLines.empty
-
-      override def partialValues(prefix: String): List[(CScalarVector, CExpression)] =
-        List(
-          (
-            CScalarVector(s"${prefix}_x", VeScalarType.veNullableDouble),
-            CExpression(s"${prefix}_aggregate_sum", None)
-          )
-        )
-
-      override def merge(prefix: String, inputPrefix: String): CodeLines =
-        CodeLines.from(s"${prefix}_aggregate_sum += ${inputPrefix}_x->data[i];")
-    }
-    def avg(cExpression: CExpression): Aggregation = new Aggregation {
-      override def initial(prefix: String): CodeLines =
-        CodeLines.from(
-          s"double ${prefix}_aggregate_sum = 0;",
-          s"long ${prefix}_aggregate_count = 0;"
-        )
-
-      override def iterate(prefix: String): CodeLines =
-        cExpression.isNotNullCode match {
-          case None =>
-            CodeLines.from(
-              s"${prefix}_aggregate_sum += ${cExpression.cCode};",
-              s"${prefix}_aggregate_count += 1;"
-            )
-          case Some(notNullCheck) =>
-            CodeLines.from(
-              s"if ( ${notNullCheck} ) {",
-              CodeLines
-                .from(
-                  s"${prefix}_aggregate_sum += ${cExpression.cCode};",
-                  s"${prefix}_aggregate_count += 1;"
-                )
-                .indented,
-              "}"
-            )
-        }
-
-      override def fetch(prefix: String): CExpression =
-        CExpression(s"${prefix}_aggregate_sum / ${prefix}_aggregate_count", None)
-
-      override def free(prefix: String): CodeLines = CodeLines.empty
-
-      override def compute(prefix: String): CodeLines = CodeLines.empty
-
-      override def partialValues(prefix: String): List[(CScalarVector, CExpression)] = List(
-        (
-          CScalarVector(s"${prefix}_aggregate_sum_partial_output", VeScalarType.veNullableDouble),
-          CExpression(s"${prefix}_aggregate_sum", None)
-        ),
-        (
-          CScalarVector(s"${prefix}_aggregate_count_partial_output", VeScalarType.veNullableLong),
-          CExpression(s"${prefix}_aggregate_count", None)
-        )
-      )
-
-      override def merge(prefix: String, inputPrefix: String): CodeLines =
-        CodeLines.from(
-          s"${prefix}_aggregate_sum += ${inputPrefix}_aggregate_sum_partial_output->data[i];",
-          s"${prefix}_aggregate_count += ${inputPrefix}_aggregate_count_partial_output->data[i];"
-        )
-    }
-  }
-
   final case class VeFilter[Data, Condition](
     stringVectorComputations: List[StringHoleEvaluation],
     data: List[Data],
@@ -415,6 +175,7 @@ object CFunctionGeneration {
   final case class VeSort[Data, Sort](data: List[Data], sorts: List[Sort])
 
   final case class VeSortExpression(typedExpression: TypedCExpression2, sortOrdering: SortOrdering)
+
   def allocateFrom(cVector: CVector)(implicit bufferAllocator: BufferAllocator): FieldVector =
     cVector.veType match {
       case VeString =>
@@ -428,159 +189,6 @@ object CFunctionGeneration {
       case VeNullableLong =>
         new BigIntVector(cVector.name, bufferAllocator)
     }
-
-  final case class CFunction(
-    inputs: List[CVector],
-    outputs: List[CVector],
-    body: CodeLines,
-    hasSets: Boolean = false
-  ) {
-    def toCodeLinesSPtr(functionName: String): CodeLines = CodeLines.from(
-      "#include <cmath>",
-      "#include <bitset>",
-      "#include <string>",
-      "#include <iostream>",
-      "#include <tuple>",
-      "#include \"tuple_hash.hpp\"",
-      """#include "frovedis/core/radix_sort.hpp"""",
-      """#include "frovedis/dataframe/join.hpp"""",
-      """#include "frovedis/dataframe/join.cc"""",
-      """#include "frovedis/core/set_operations.hpp"""",
-      TcpDebug.conditional.headers,
-      toCodeLinesNoHeaderOutPtr2(functionName)
-    )
-    def toCodeLinesS(functionName: String): CodeLines = CodeLines.from(
-      "#include <cmath>",
-      "#include <bitset>",
-      "#include <string>",
-      "#include <iostream>",
-      "#include <tuple>",
-      "#include \"tuple_hash.hpp\"",
-      """#include "frovedis/core/radix_sort.hpp"""",
-      """#include "frovedis/dataframe/join.hpp"""",
-      """#include "frovedis/dataframe/join.cc"""",
-      """#include "frovedis/core/set_operations.hpp"""",
-      TcpDebug.conditional.headers,
-      toCodeLinesNoHeader(functionName)
-    )
-
-    def arguments: List[CVector] = inputs ++ outputs
-
-    def toCodeLinesPF(functionName: String): CodeLines = {
-      CodeLines.from(
-        "#include <cmath>",
-        "#include <bitset>",
-        "#include <string>",
-        "#include <iostream>",
-        TcpDebug.conditional.headers,
-        toCodeLinesNoHeader(functionName)
-      )
-    }
-    def toCodeLinesG(functionName: String): CodeLines = {
-      CodeLines.from(
-        "#include <cmath>",
-        "#include <bitset>",
-        "#include <string>",
-        "#include <iostream>",
-        "#include <tuple>",
-        "#include \"tuple_hash.hpp\"",
-        TcpDebug.conditional.headers,
-        toCodeLinesNoHeader(functionName)
-      )
-    }
-    def toCodeLinesJ(functionName: String): CodeLines = {
-      CodeLines.from(
-        "#include <cmath>",
-        "#include <bitset>",
-        "#include <string>",
-        "#include <iostream>",
-        """#include "frovedis/dataframe/join.hpp"""",
-        """#include "frovedis/dataframe/join.cc"""",
-        """#include "frovedis/core/set_operations.hpp"""",
-        TcpDebug.conditional.headers,
-        toCodeLinesNoHeader(functionName)
-      )
-    }
-
-    def toCodeLinesNoHeader(functionName: String): CodeLines = {
-      CodeLines.from(
-        s"""extern "C" long $functionName(""",
-        arguments
-          .map { cVector =>
-            s"${cVector.veType.cVectorType} *${cVector.name}"
-          }
-          .mkString(",\n"),
-        ") {",
-        body.indented,
-        "  ",
-        "  return 0;",
-        "};"
-      )
-    }
-
-    def toCodeLinesNoHeaderOutPtr(functionName: String): CodeLines = {
-      CodeLines.from(
-        s"""extern "C" long $functionName(""", {
-          inputs
-            .map { cVector =>
-              s"${cVector.veType.cVectorType} **${cVector.name}"
-            } ++ { if (hasSets) List("int *sets") else Nil } ++
-            outputs
-              .map { cVector =>
-                s"${cVector.veType.cVectorType} **${cVector.name}"
-              }
-        }
-          .mkString(",\n"),
-        ") {",
-        body.indented,
-        "  ",
-        "  return 0;",
-        "};"
-      )
-    }
-
-    def toCodeLinesNoHeaderOutPtr2(functionName: String): CodeLines = {
-      CodeLines.from(
-        s"""extern "C" long $functionName(""", {
-          List(
-            inputs
-              .map { cVector =>
-                s"${cVector.veType.cVectorType} **${cVector.name}_m"
-              },
-            if (hasSets) List("int *sets") else Nil,
-            outputs
-              .map { cVector =>
-                s"${cVector.veType.cVectorType} **${cVector.name}_mo"
-              }
-          ).flatten
-        }
-          .mkString(",\n"),
-        ") {",
-        CodeLines
-          .from(
-            CodeLines.debugHere,
-            inputs.map { cVector =>
-              CodeLines.from(
-                s"${cVector.veType.cVectorType}* ${cVector.name} = ${cVector.name}_m[0];"
-              )
-            },
-            CodeLines.debugHere,
-            outputs.map { cVector =>
-              CodeLines.from(
-                s"${cVector.veType.cVectorType}* ${cVector.name} = (${cVector.veType.cVectorType} *)malloc(sizeof(${cVector.veType.cVectorType}));",
-                s"*${cVector.name}_mo = ${cVector.name};"
-              )
-            },
-            CodeLines.debugHere,
-            body
-          )
-          .indented,
-        "  ",
-        "  return 0;",
-        "};"
-      )
-    }
-  }
 
   def renderSort(sort: VeSort[CScalarVector, VeSortExpression]): CFunction = {
 
@@ -715,7 +323,7 @@ object CFunctionGeneration {
             val varName = cVector.replaceName("input", "output").name
             CodeLines.from(
               CodeLines.debugHere,
-              GroupByOutline.initializeScalarVector(
+              initializeScalarVector(
                 veScalarType = tpe,
                 variableName = varName,
                 countExpression = s"matching_ids.size()"
@@ -844,25 +452,28 @@ object CFunctionGeneration {
         "std::vector<size_t> left_idx;",
         s"std::vector <${veInnerJoin.rightKey.veType.cScalarType}> right_vec;",
         "std::vector<size_t> right_idx;",
-        "#pragma _NEC ivdep",
-        s"for(int i = 0; i < ${veInnerJoin.leftKey.cExpression.cCode
-          .replace("data[i]", "count")}; i++) { ",
-        CodeLines
-          .from(
-            s"left_vec.push_back(${veInnerJoin.leftKey.cExpression.cCode});",
-            "left_idx.push_back(i);"
-          )
-          .indented,
-        "}",
-        s"for(int i = 0; i < ${veInnerJoin.rightKey.cExpression.cCode
-          .replace("data[i]", "count")}; i++) { ",
-        CodeLines
-          .from(
-            s"right_vec.push_back(${veInnerJoin.rightKey.cExpression.cCode});",
-            "right_idx.push_back(i);"
-          )
-          .indented,
-        "}",
+        CodeLines.forLoop(
+          "i",
+          s"${veInnerJoin.leftKey.cExpression.cCode
+            .replace("data[i]", "count")}"
+        ) {
+          CodeLines
+            .from(
+              s"left_vec.push_back(${veInnerJoin.leftKey.cExpression.cCode});",
+              "left_idx.push_back(i);"
+            )
+        },
+        CodeLines.forLoop(
+          "i",
+          s"${veInnerJoin.rightKey.cExpression.cCode
+            .replace("data[i]", "count")}"
+        )(
+          CodeLines
+            .from(
+              s"right_vec.push_back(${veInnerJoin.rightKey.cExpression.cCode});",
+              "right_idx.push_back(i);"
+            )
+        ),
         "std::vector<size_t> right_out;",
         "std::vector<size_t> left_out;",
         s"frovedis::equi_join<${veInnerJoin.leftKey.veType.cScalarType}>(left_vec, left_idx, right_vec, right_idx, left_out, right_out);",
@@ -876,37 +487,40 @@ object CFunctionGeneration {
               )
           )
         },
-        "for(int i = 0; i < left_out.size(); i++) { ",
-        veInnerJoin.outputs.map { case NamedJoinExpression(outputName, veType, joinExpression) =>
-          joinExpression.fold(ce => ce) match {
-            case ex =>
-              ex.isNotNullCode match {
-                case None =>
-                  CodeLines
-                    .from(
-                      s"${outputName}->data[i] = ${ex.cCode};",
-                      s"set_validity($outputName->validityBuffer, i, 1);"
-                    )
-                    .indented
-                case Some(nullCheck) =>
-                  CodeLines
-                    .from(
-                      s"if( ${nullCheck} ) {",
+        CodeLines.forLoop("i", "left_out.size()") {
+          CodeLines.from(veInnerJoin.outputs.map {
+            case NamedJoinExpression(outputName, veType, joinExpression) =>
+              joinExpression.fold(ce => ce) match {
+                case ex =>
+                  ex.isNotNullCode match {
+                    case None =>
                       CodeLines
                         .from(
                           s"${outputName}->data[i] = ${ex.cCode};",
                           s"set_validity($outputName->validityBuffer, i, 1);"
                         )
-                        .indented,
-                      "} else {",
-                      CodeLines.from(s"set_validity($outputName->validityBuffer, i, 0);").indented,
-                      "}"
-                    )
-                    .indented
+                        .indented
+                    case Some(nullCheck) =>
+                      CodeLines
+                        .from(
+                          s"if( ${nullCheck} ) {",
+                          CodeLines
+                            .from(
+                              s"${outputName}->data[i] = ${ex.cCode};",
+                              s"set_validity($outputName->validityBuffer, i, 1);"
+                            )
+                            .indented,
+                          "} else {",
+                          CodeLines
+                            .from(s"set_validity($outputName->validityBuffer, i, 0);")
+                            .indented,
+                          "}"
+                        )
+                        .indented
+                  }
               }
-          }
+          })
         },
-        "}",
         veInnerJoin.outputs.map { case NamedJoinExpression(outputName, veType, joinExpression) =>
           CodeLines.from(s"${outputName}->count = left_out.size();")
         }

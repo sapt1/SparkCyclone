@@ -21,16 +21,9 @@ package com.nec.spark.planning
 
 import com.nec.arrow.ArrowNativeInterface.SupportedVectorWrapper
 import com.nec.native.NativeEvaluator
-import com.nec.spark.agile.CExpressionEvaluation.CodeLines
+import com.nec.ve.CodeLines
 import com.typesafe.scalalogging.LazyLogging
-import org.apache.arrow.vector.{
-  BigIntVector,
-  BitVectorHelper,
-  Float8Vector,
-  IntVector,
-  VectorSchemaRoot
-}
-
+import org.apache.arrow.vector._
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.expressions.aggregate.AggregateExpression
@@ -41,14 +34,8 @@ import org.apache.spark.sql.catalyst.expressions.{
   AttributeReference,
   NamedExpression
 }
-import org.apache.spark.sql.catalyst.plans.logical.BinaryNode
 import org.apache.spark.sql.execution.arrow.ArrowWriter
-import org.apache.spark.sql.execution.{
-  BinaryExecNode,
-  ColumnarToRowTransition,
-  SparkPlan,
-  UnaryExecNode
-}
+import org.apache.spark.sql.execution.{BinaryExecNode, SparkPlan}
 import org.apache.spark.sql.types.{DoubleType, IntegerType, LongType}
 import org.apache.spark.sql.util.ArrowUtilsExposed
 

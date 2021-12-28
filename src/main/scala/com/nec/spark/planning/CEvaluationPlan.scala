@@ -22,18 +22,9 @@ package com.nec.spark.planning
 import com.nec.arrow.ArrowNativeInterface
 import com.nec.native.NativeEvaluator
 import com.nec.spark.ColumnarBatchToArrow
-import com.nec.spark.agile.CExpressionEvaluation.CodeLines
 import com.nec.spark.planning.CEvaluationPlan.batchColumnarBatches
 import com.typesafe.scalalogging.LazyLogging
-import org.apache.arrow.vector.{
-  BigIntVector,
-  BitVectorHelper,
-  FieldVector,
-  Float8Vector,
-  IntVector,
-  SmallIntVector,
-  VectorSchemaRoot
-}
+import org.apache.arrow.vector.{BigIntVector, BitVectorHelper, FieldVector, Float8Vector, IntVector, SmallIntVector, VectorSchemaRoot}
 import org.apache.commons.lang3.reflect.FieldUtils
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.InternalRow
@@ -64,6 +55,7 @@ import org.apache.spark.sql.catalyst.expressions.aggregate.Min
 import org.apache.spark.sql.catalyst.expressions.aggregate.Max
 import com.nec.arrow.ArrowNativeInterface.SupportedVectorWrapper
 import com.nec.spark.planning.CEvaluationPlan.HasFloat8Vector.RichObject
+import com.nec.ve.CodeLines
 object CEvaluationPlan {
 
   object HasFloat8Vector {

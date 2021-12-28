@@ -19,16 +19,13 @@
  */
 package com.nec.spark.agile.groupby
 
-import com.nec.spark.agile.CExpressionEvaluation.CodeLines
 import com.nec.spark.agile.CFunctionGeneration._
 import com.nec.spark.agile.StringProducer.FilteringProducer
-import com.nec.spark.agile.groupby.GroupByOutline.{
-  GroupingKey,
-  StagedAggregation,
-  StagedProjection,
-  StringReference
-}
+import com.nec.spark.agile.groupby.GroupByOutline.{GroupingKey, StagedAggregation, StagedProjection, StringReference}
 import com.nec.spark.agile.{GroupingCodeGenerator, StringProducer}
+import com.nec.ve.CodeLines.storeTo
+import com.nec.ve.{CVector, CodeLines, VeType}
+import com.nec.ve.VeType.{VeScalarType, VeString}
 
 /**
  * General class to describe a group-by to create the function outline
@@ -123,14 +120,14 @@ final case class GroupByOutline(
           .block
       case stagedProjection @ StagedProjection(_, scalarType: VeScalarType) =>
         CodeLines.from(
-          GroupByOutline.initializeScalarVector(
+          CodeLines.initializeScalarVector(
             veScalarType = scalarType,
             variableName = stagedProjection.name,
             countExpression = groupingCodeGenerator.groupsCountOutName
           ),
           groupingCodeGenerator.forHeadOfEachGroup(
             CodeLines.from(
-              GroupByOutline.storeTo(
+              storeTo(
                 stagedProjection.name,
                 CExpression(
                   cCode = s"partial_${stagedProjection.name}->data[i]",
@@ -147,23 +144,6 @@ final case class GroupByOutline(
 }
 
 object GroupByOutline {
-  def initializeStringVector(variableName: String): CodeLines = CodeLines.empty
-
-  def debugVector(name: String): CodeLines = {
-    CodeLines.from(
-      s"for (int i = 0; i < $name->count; i++) {",
-      CodeLines.from(
-        s"""std::cout << "${name}[" << i << "] = " << ${name}->data[i] << " (valid? " << check_valid(${name}->validityBuffer, i) << ")" << std::endl << std::flush; """
-      ),
-      "}"
-    )
-  }
-
-  def dealloc(cv: CVector): CodeLines = CodeLines.empty
-
-  def declare(cv: CVector): CodeLines = CodeLines.from(
-    s"${cv.veType.cVectorType} *${cv.name} = (${cv.veType.cVectorType}*)malloc(sizeof(${cv.veType.cVectorType}));"
-  )
 
   final case class StringReference(name: String)
   final case class InputReference(name: String)
@@ -175,56 +155,5 @@ object GroupByOutline {
     finalType: VeType,
     attributes: List[StagedAggregationAttribute]
   )
-
-  def storeTo(outputName: String, cExpression: CExpression, idx: String): CodeLines =
-    cExpression.isNotNullCode match {
-      case None =>
-        CodeLines.from(
-          s"""$outputName->data[${idx}] = ${cExpression.cCode};""",
-          s"set_validity($outputName->validityBuffer, ${idx}, 1);"
-        )
-      case Some(notNullCheck) =>
-        CodeLines.from(
-          s"if ( $notNullCheck ) {",
-          CodeLines
-            .from(
-              s"""$outputName->data[${idx}] = ${cExpression.cCode};""",
-              s"set_validity($outputName->validityBuffer, ${idx}, 1);"
-            )
-            .indented,
-          "} else {",
-          CodeLines.from(s"set_validity($outputName->validityBuffer, ${idx}, 0);").indented,
-          "}"
-        )
-    }
-
-  def initializeScalarVector(
-    veScalarType: VeScalarType,
-    variableName: String,
-    countExpression: String
-  ): CodeLines =
-    CodeLines.from(
-      s"$variableName->count = ${countExpression};",
-      s"$variableName->data = (${veScalarType.cScalarType}*) malloc($variableName->count * sizeof(${veScalarType.cScalarType}));",
-      s"$variableName->validityBuffer = (uint64_t *) malloc(ceil(${countExpression} / 64.0) * sizeof(uint64_t));"
-    )
-
-  def scalarVectorFromStdVector(
-    veScalarType: VeScalarType,
-    targetName: String,
-    sourceName: String
-  ): CodeLines =
-    CodeLines.from(
-      s"$targetName = (${veScalarType.cVectorType}*)malloc(sizeof(${veScalarType.cVectorType}));",
-      initializeScalarVector(veScalarType, targetName, s"$sourceName.size()"),
-      s"for ( int x = 0; x < $sourceName.size(); x++ ) {",
-      CodeLines
-        .from(
-          s"$targetName->data[x] = $sourceName[x];",
-          s"set_validity($targetName->validityBuffer, x, 1);"
-        )
-        .indented,
-      "}"
-    )
 
 }

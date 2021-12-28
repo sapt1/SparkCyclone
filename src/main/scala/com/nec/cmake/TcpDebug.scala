@@ -19,8 +19,8 @@
  */
 package com.nec.cmake
 
-import com.nec.spark.agile.CExpressionEvaluation.CodeLines
 import com.nec.spark.planning.Tracer
+import com.nec.ve.CodeLines
 
 object TcpDebug {
 

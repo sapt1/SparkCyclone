@@ -19,8 +19,8 @@
  */
 package com.nec.spark.agile
 
-import com.nec.spark.agile.CExpressionEvaluation.CodeLines
 import com.nec.spark.agile.CFunctionGeneration.CExpression
+import com.nec.ve.CodeLines
 
 final case class GroupingCodeGenerator(
   groupingVecName: String,

@@ -4,13 +4,13 @@ import com.eed3si9n.expecty.Expecty.expect
 import com.nec.arrow.ArrowVectorBuilders._
 import com.nec.arrow.WithTestAllocator
 import com.nec.spark.SparkCycloneExecutorPlugin.source
-import com.nec.spark.agile.CFunctionGeneration.VeScalarType.VeNullableDouble
-import com.nec.spark.agile.CFunctionGeneration.{VeScalarType, VeString}
 import com.nec.util.RichVectors.{RichFloat8, RichVarCharVector}
 import com.nec.ve.GroupingFunction.DataDescription
 import com.nec.ve.GroupingFunction.DataDescription.KeyOrValue
 import com.nec.ve.PureVeFunctions.{DoublingFunction, PartitioningFunction}
 import com.nec.ve.VeColBatch.{VeBatchOfBatches, VeColVector}
+import com.nec.ve.VeType.VeScalarType.VeNullableDouble
+import com.nec.ve.VeType.{VeScalarType, VeString}
 import org.apache.arrow.memory.BufferAllocator
 import org.apache.arrow.vector.{FieldVector, Float8Vector, ValueVector, VarCharVector}
 import org.scalatest.freespec.AnyFreeSpec

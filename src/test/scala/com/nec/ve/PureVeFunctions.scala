@@ -1,8 +1,7 @@
 package com.nec.ve
 
-import com.nec.spark.agile.CExpressionEvaluation.CodeLines
-import com.nec.spark.agile.CFunctionGeneration.{CFunction, VeScalarType}
-import com.nec.spark.agile.groupby.GroupByOutline
+import com.nec.ve.CodeLines.{initializeScalarVector, scalarVectorFromStdVector}
+import com.nec.ve.VeType.VeScalarType
 
 object PureVeFunctions {
   val DoublingFunction: CFunction = CFunction(
@@ -15,8 +14,7 @@ object PureVeFunctions {
             "nullable_double_vector* o = (nullable_double_vector *)malloc(sizeof(nullable_double_vector));",
             "*o_p = o;",
             CodeLines.debugValue("input[0]->count"),
-            GroupByOutline
-              .initializeScalarVector(VeScalarType.VeNullableDouble, "o", "input[0]->count"),
+            initializeScalarVector(VeScalarType.VeNullableDouble, "o", "input[0]->count"),
             "for ( int i = 0; i < input[0]->count; i++ ) {",
             CodeLines
               .from("o->data[i] = input[0]->data[i] * 2;", "set_validity(o->validityBuffer, i, 1);")
@@ -51,8 +49,7 @@ object PureVeFunctions {
               )
               .indented,
             "}",
-            GroupByOutline
-              .scalarVectorFromStdVector(VeScalarType.VeNullableDouble, "o_p[s]", "nums")
+            scalarVectorFromStdVector(VeScalarType.VeNullableDouble, "o_p[s]", "nums")
           )
           .indented,
         "}"

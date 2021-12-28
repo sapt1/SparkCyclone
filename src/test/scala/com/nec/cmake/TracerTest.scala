@@ -22,10 +22,9 @@ package com.nec.cmake
 import com.nec.arrow.ArrowNativeInterface.NativeArgument
 import com.nec.arrow.WithTestAllocator
 import com.nec.native.NativeEvaluator
-import com.nec.spark.agile.CExpressionEvaluation.CodeLines
-import com.nec.spark.agile.CFunctionGeneration.CFunction
 import com.nec.spark.planning.Tracer
 import com.nec.spark.planning.Tracer.Mapped
+import com.nec.ve.{CFunction, CodeLines}
 import org.scalatest.freespec.AnyFreeSpec
 
 class TracerTest extends AnyFreeSpec {

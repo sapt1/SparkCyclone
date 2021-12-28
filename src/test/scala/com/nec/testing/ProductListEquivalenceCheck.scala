@@ -1,18 +1,7 @@
 package com.nec.testing
-import ProductListEquivalenceCheck._
-import com.eed3si9n.expecty.Expecty.expect
-import com.nec.cmake.DynamicCSqlExpressionEvaluationSpec
-import com.nec.spark.SparkAdditions
-import com.nec.spark.agile.CFunctionGeneration.CFunction
-import com.typesafe.scalalogging.LazyLogging
-import org.apache.spark.sql.types._
-import org.apache.spark.sql.{Dataset, SparkSession}
-import org.scalactic.source.Position
-import org.scalactic.{Equality, Equivalence, TolerantNumerics}
+import com.nec.testing.ProductListEquivalenceCheck._
+import org.scalactic.{Equality, TolerantNumerics}
 import org.scalatest.freespec.AnyFreeSpec
-import org.scalatest.matchers.should.Matchers
-import org.scalatest.{BeforeAndAfter, BeforeAndAfterAllConfigMap, ConfigMap}
-import scalatags.Text.tags2.{details, summary}
 
 final class ProductListEquivalenceCheck extends AnyFreeSpec {
   "A list of classes with some Doubles is equivalent" in {

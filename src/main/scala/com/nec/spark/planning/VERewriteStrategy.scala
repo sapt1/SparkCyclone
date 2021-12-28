@@ -19,7 +19,6 @@
  */
 package com.nec.spark.planning
 
-import com.nec.spark.agile.CExpressionEvaluation.CodeLines
 import com.nec.spark.agile.CFunctionGeneration._
 import com.nec.spark.agile.SparkExpressionToCExpression._
 import com.nec.spark.agile.groupby.ConvertNamedExpression.{computeAggregate, mapGroupingExpression}
@@ -30,8 +29,9 @@ import com.nec.spark.planning.TransformUtil.RichTreeNode
 import com.nec.spark.planning.VERewriteStrategy.{GroupPrefix, InputPrefix, SequenceList}
 import com.nec.spark.planning.VeFunction.VeFunctionStatus
 import com.nec.spark.planning.plans._
+import com.nec.ve.CVector.CScalarVector
 import com.nec.ve.GroupingFunction.DataDescription
-import com.nec.ve.{GroupingFunction, MergerFunction}
+import com.nec.ve.{CodeLines, GroupingFunction, MergerFunction}
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, HyperLogLogPlusPlus}
 import org.apache.spark.sql.catalyst.expressions.{Alias, AttributeReference, Expression, NamedExpression, SortOrder}
