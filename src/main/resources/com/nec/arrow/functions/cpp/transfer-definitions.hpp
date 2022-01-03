@@ -28,7 +28,6 @@
 #include <chrono>
 #include <ctime>
 #include <algorithm>
-#include "dict.cc"
 #include "dict.hpp"
 #include "words.hpp"
 #include "words.cc"
@@ -41,6 +40,8 @@
 #include "datetime_utility.hpp"
 
 #ifndef VE_TD_DEFS
+#include "dict.cc"
+
 typedef struct
 {
     void **data;
