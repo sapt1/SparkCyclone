@@ -47,7 +47,6 @@ final case class JoinByEquality(
     """#include "frovedis/text/words.hpp"""",
     """#include "frovedis/text/words.cc"""",
     """#include "frovedis/text/dict.hpp"""",
-    """#include "frovedis/text/dict.cc"""",
     """#include <iostream>""",
     """#include <vector>""",
     """#include <cmath>""",
