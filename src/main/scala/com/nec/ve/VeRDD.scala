@@ -58,6 +58,7 @@ object VeRDD extends LazyLogging {
   ): RDD[(List[VeColVector], List[VeColVector])] = {
     joinExchangeL(left.map { case (k, b) => k -> b.cols }, right.map { case (k, b) => k -> b.cols })
   }
+
   def joinExchangeL(
     left: RDD[(Int, List[VeColVector])],
     right: RDD[(Int, List[VeColVector])]
@@ -75,7 +76,7 @@ object VeRDD extends LazyLogging {
             },
           preservesPartitioning = true
         )
-      val rightPts = left
+      val rightPts = right
         .mapPartitions(
           f = iter =>
             iter.map { case (p, v) =>
