@@ -133,18 +133,49 @@ final case class VERewriteStrategy(
 
           val functionName = s"join_${functionPrefix}"
 
+          val exchangeNameL = s"exchange_l_$functionPrefix"
+          val exchangeNameR = s"exchange_r_$functionPrefix"
+          val exchangeFunctionL = {
+            val gd = List.empty[DataDescription]
+            GroupingFunction.groupData(data = gd, totalBuckets = 16)
+          }
+          val exchangeFunctionR = {
+            val gd = List.empty[DataDescription]
+            GroupingFunction.groupData(data = gd, totalBuckets = 16)
+          }
+
+          val code = CodeLines
+            .from(
+              exchangeFunctionL.toCodeLines(exchangeNameL),
+              exchangeFunctionR.toCodeLines(exchangeNameR)
+            )
+
           List(
             VectorEngineToSparkPlan(
               VectorEngineJoinPlan(
                 outputExpressions = leftChild.output ++ rightChild.output,
-                veFunction = VeFunction(
+                joinFunction = VeFunction(
                   veFunctionStatus =
                     VeFunctionStatus.SourceCode(genericJoiner.produce(functionName).cCode),
                   functionName = functionName,
                   results = genericJoiner.outputs.map(_.cVector.veType)
                 ),
-                left = SparkToVectorEnginePlan(planLater(leftChild)),
-                right = SparkToVectorEnginePlan(planLater(rightChild))
+                left = VeHashExchange(
+                  exchangeFunction = VeFunction(
+                    veFunctionStatus = VeFunctionStatus.SourceCode(code.cCode),
+                    functionName = exchangeNameL,
+                    results = inputsLeft.map(_.veType)
+                  ),
+                  child = SparkToVectorEnginePlan(planLater(leftChild))
+                ),
+                right = VeHashExchange(
+                  exchangeFunction = VeFunction(
+                    veFunctionStatus = VeFunctionStatus.SourceCode(code.cCode),
+                    functionName = exchangeNameR,
+                    results = inputsRight.map(_.veType)
+                  ),
+                  child = SparkToVectorEnginePlan(planLater(rightChild))
+                )
               )
             )
           )

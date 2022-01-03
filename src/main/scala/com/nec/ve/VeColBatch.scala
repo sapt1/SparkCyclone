@@ -38,6 +38,8 @@ import org.apache.spark.sql.util.ArrowUtilsExposed.RichSmallIntVector
 
 //noinspection AccessorLikeMethodIsEmptyParen
 final case class VeColBatch(numRows: Int, cols: List[VeColVector]) {
+  def nonEmpty: Boolean = numRows > 0
+
   def toArrowColumnarBatch()(implicit
     bufferAllocator: BufferAllocator,
     veProcess: VeProcess

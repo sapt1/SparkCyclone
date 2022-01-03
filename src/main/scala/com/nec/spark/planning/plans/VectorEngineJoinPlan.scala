@@ -9,7 +9,7 @@ import org.apache.spark.sql.execution.{BinaryExecNode, SparkPlan, UnaryExecNode}
 
 case class VectorEngineJoinPlan(
   outputExpressions: Seq[NamedExpression],
-  veFunction: VeFunction,
+  joinFunction: VeFunction,
   left: SparkPlan,
   right: SparkPlan
 ) extends SparkPlan
@@ -18,10 +18,41 @@ case class VectorEngineJoinPlan(
   with SupportsVeColBatch
   with PlanCallsVeFunction {
 
-  override def executeVeColumnar(): RDD[VeColBatch] = ???
+  override def executeVeColumnar(): RDD[VeColBatch] =
+    left
+      .asInstanceOf[SupportsVeColBatch]
+      .executeVeColumnar()
+      .zipPartitions(right.asInstanceOf[SupportsVeColBatch].executeVeColumnar()) {
+        case (leftCB, rightCB) =>
+          logger.info(s"Will map multiple col batches for hash exchange.")
+          import com.nec.spark.SparkCycloneExecutorPlugin.veProcess
+          import com.nec.spark.SparkCycloneExecutorPlugin.source
+          withVeLibrary { libRefJoin =>
+            val leftColumnBatches = leftCB.toList
+            rightCB.flatMap { rightColBatch =>
+              try {
+                leftColumnBatches.flatMap { leftColBatch =>
+                  logger.debug(s"Mapping ${leftColBatch} / ${rightColBatch} for join")
+                  val batch = veProcess.execute(
+                    libraryReference = libRefJoin,
+                    functionName = joinFunction.functionName,
+                    cols = leftColBatch.cols ++ rightColBatch.cols,
+                    results = joinFunction.results
+                  )
+                  logger.debug(s"Completed ${leftColBatch} / ${rightColBatch} => ${batch}.")
+                  Option(VeColBatch.fromList(batch)).filter(_.nonEmpty).toList
+                }
+              } finally {
+                right.asInstanceOf[SupportsVeColBatch].dataCleanup.cleanup(rightColBatch)
+              }
+            }
+          }
+      }
 
   override def updateVeFunction(f: VeFunction => VeFunction): SparkPlan =
-    copy(veFunction = f(veFunction))
+    copy(joinFunction = f(joinFunction))
 
   override def output: Seq[Attribute] = outputExpressions.map(_.toAttribute)
+
+  override def veFunction: VeFunction = joinFunction
 }
