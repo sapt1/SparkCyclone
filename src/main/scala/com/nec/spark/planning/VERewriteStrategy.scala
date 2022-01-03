@@ -111,8 +111,8 @@ final case class VERewriteStrategy(
               Inner,
               Some(
                 condition @ EqualTo(
-                  arl @ AttributeReference(_, _, _, _),
-                  arr @ AttributeReference(_, _, _, _)
+                  ar1 @ AttributeReference(_, _, _, _),
+                  ar2 @ AttributeReference(_, _, _, _)
                 )
               ),
               _
@@ -127,18 +127,16 @@ final case class VERewriteStrategy(
             try {
               List(
                 GenericJoiner.Join(
-                  try {
-                    inputsLeft(leftChild.output.indexWhere(att => att.exprId == arl.exprId))
-                  } catch {
-                    case e: Throwable =>
-                      inputsRight(rightChild.output.indexWhere(att => att.exprId == arr.exprId))
-                  },
-                  try {
-                    inputsRight(rightChild.output.indexWhere(att => att.exprId == arr.exprId))
-                  } catch {
-                    case e: Throwable =>
-                      inputsLeft(leftChild.output.indexWhere(att => att.exprId == arl.exprId))
-                  }
+                  left = inputsLeft(
+                    leftChild.output.indexWhere(attr =>
+                      List(ar1, ar2).exists(_.exprId == attr.exprId)
+                    )
+                  ),
+                  right = inputsRight(
+                    rightChild.output.indexWhere(attr =>
+                      List(ar1, ar2).exists(_.exprId == attr.exprId)
+                    )
+                  )
                 )
               )
             } catch {
