@@ -3,6 +3,7 @@ package com.nec.spark.planning.plans
 import com.nec.spark.planning.{PlanCallsVeFunction, SupportsVeColBatch, VeFunction}
 import com.nec.ve.VeColBatch
 import com.typesafe.scalalogging.LazyLogging
+import org.apache.spark.TaskContext
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.expressions.{Attribute, NamedExpression}
 import org.apache.spark.sql.execution.{BinaryExecNode, SparkPlan, UnaryExecNode}
@@ -29,6 +30,14 @@ case class VectorEngineJoinPlan(
           import com.nec.spark.SparkCycloneExecutorPlugin.source
           withVeLibrary { libRefJoin =>
             val leftColumnBatches = leftCB.toList
+
+            TaskContext.get().addTaskCompletionListener[Unit] { _ =>
+              Option(leftColumnBatches).toList.flatten
+                .foreach(leftColBatch =>
+                  left.asInstanceOf[SupportsVeColBatch].dataCleanup.cleanup(leftColBatch)
+                )
+            }
+
             rightCB.flatMap { rightColBatch =>
               try {
                 leftColumnBatches.flatMap { leftColBatch =>
@@ -46,6 +55,7 @@ case class VectorEngineJoinPlan(
                 right.asInstanceOf[SupportsVeColBatch].dataCleanup.cleanup(rightColBatch)
               }
             }
+
           }
       }
 
