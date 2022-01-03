@@ -109,7 +109,10 @@ final case class VERewriteStrategy(
               rightChild,
               Inner,
               Some(
-                EqualTo(arl @ AttributeReference(_, _, _, _), arr @ AttributeReference(_, _, _, _))
+                condition @ EqualTo(
+                  arl @ AttributeReference(_, _, _, _),
+                  arr @ AttributeReference(_, _, _, _)
+                )
               ),
               _
             ) =>
@@ -119,17 +122,22 @@ final case class VERewriteStrategy(
           val inputsRight = rightChild.output.toList.zipWithIndex.map { case (att, idx) =>
             sparkTypeToVeType(att.dataType).makeCVector(s"$InputPrefix$idx")
           }
-          val genericJoiner = GenericJoiner(
-            inputsLeft = inputsLeft,
-            inputsRight = inputsRight,
-            joins = List(
-              GenericJoiner.Join(
-                inputsLeft(leftChild.output.indexWhere(att => att.exprId == arl.exprId)),
-                inputsRight(leftChild.output.indexWhere(att => att.exprId == arr.exprId))
-              )
-            ),
-            outputs = (inputsLeft ++ inputsRight).map(cv => FilteredOutput(cv.name, cv))
-          )
+          val genericJoiner =
+            try GenericJoiner(
+              inputsLeft = inputsLeft,
+              inputsRight = inputsRight,
+              joins = List(
+                GenericJoiner.Join(
+                  inputsLeft(leftChild.output.indexWhere(att => att.exprId == arl.exprId)),
+                  inputsRight(rightChild.output.indexWhere(att => att.exprId == arr.exprId))
+                )
+              ),
+              outputs = (inputsLeft ++ inputsRight).map(cv => FilteredOutput(cv.name, cv))
+            )
+            catch {
+              case e: Throwable =>
+                throw new RuntimeException(s"Condition: ${condition}; ${e}", e)
+            }
 
           val functionName = s"join_${functionPrefix}"
 
