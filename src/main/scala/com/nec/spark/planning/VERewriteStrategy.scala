@@ -123,22 +123,28 @@ final case class VERewriteStrategy(
           val inputsRight = rightChild.output.toList.zipWithIndex.map { case (att, idx) =>
             sparkTypeToVeType(att.dataType).makeCVector(s"$InputPrefix$idx")
           }
-          val joins = List(
-            GenericJoiner.Join(
-              try {
-                inputsLeft(leftChild.output.indexWhere(att => att.exprId == arl.exprId))
-              } catch {
-                case e: Throwable =>
-                  inputsRight(rightChild.output.indexWhere(att => att.exprId == arr.exprId))
-              },
-              try {
-                inputsRight(rightChild.output.indexWhere(att => att.exprId == arr.exprId))
-              } catch {
-                case e: Throwable =>
-                  inputsLeft(leftChild.output.indexWhere(att => att.exprId == arl.exprId))
-              }
-            )
-          )
+          val joins =
+            try {
+              List(
+                GenericJoiner.Join(
+                  try {
+                    inputsLeft(leftChild.output.indexWhere(att => att.exprId == arl.exprId))
+                  } catch {
+                    case e: Throwable =>
+                      inputsRight(rightChild.output.indexWhere(att => att.exprId == arr.exprId))
+                  },
+                  try {
+                    inputsRight(rightChild.output.indexWhere(att => att.exprId == arr.exprId))
+                  } catch {
+                    case e: Throwable =>
+                      inputsLeft(leftChild.output.indexWhere(att => att.exprId == arl.exprId))
+                  }
+                )
+              )
+            } catch {
+              case e: Throwable =>
+                throw new RuntimeException(s"Condition: ${condition}; ${e}", e)
+            }
           val genericJoiner =
             try {
               GenericJoiner(
