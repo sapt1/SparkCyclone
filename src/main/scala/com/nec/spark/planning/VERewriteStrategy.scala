@@ -116,7 +116,7 @@ final case class VERewriteStrategy(
                 )
               ),
               _
-            ) =>
+            ) if options.joinOnVe =>
           val inputsLeft = leftChild.output.toList.zipWithIndex.map { case (att, idx) =>
             sparkTypeToVeType(att.dataType).makeCVector(s"l_$InputPrefix$idx")
           }
