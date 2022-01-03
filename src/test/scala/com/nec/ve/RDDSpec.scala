@@ -205,7 +205,7 @@ object RDDSpec {
         }
       )
       .map { case (la, lb) =>
-        (la.flatMap(_.toList[Double]), la.flatMap(_.toList[Double]))
+        (la.flatMap(_.toList[Double]), lb.flatMap(_.toList[Double]))
       }
       .collect()
       .toList
