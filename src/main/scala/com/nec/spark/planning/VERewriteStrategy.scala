@@ -24,7 +24,14 @@ import com.nec.spark.agile.CFunctionGeneration._
 import com.nec.spark.agile.SparkExpressionToCExpression._
 import com.nec.spark.agile.groupby.ConvertNamedExpression.{computeAggregate, mapGroupingExpression}
 import com.nec.spark.agile.groupby.GroupByOutline.GroupingKey
-import com.nec.spark.agile.groupby.{ConvertNamedExpression, GroupByOutline, GroupByPartialGenerator, GroupByPartialToFinalGenerator}
+import com.nec.spark.agile.groupby.{
+  ConvertNamedExpression,
+  GroupByOutline,
+  GroupByPartialGenerator,
+  GroupByPartialToFinalGenerator
+}
+import com.nec.spark.agile.join.GenericJoiner
+import com.nec.spark.agile.join.GenericJoiner.FilteredOutput
 import com.nec.spark.agile.{CFunctionGeneration, SparkExpressionToCExpression, StringHole}
 import com.nec.spark.planning.TransformUtil.RichTreeNode
 import com.nec.spark.planning.VERewriteStrategy.{GroupPrefix, InputPrefix, SequenceList}
@@ -33,9 +40,19 @@ import com.nec.spark.planning.plans._
 import com.nec.ve.GroupingFunction.DataDescription
 import com.nec.ve.{GroupingFunction, MergerFunction}
 import com.typesafe.scalalogging.LazyLogging
-import org.apache.spark.sql.catalyst.expressions.aggregate.{AggregateExpression, HyperLogLogPlusPlus}
-import org.apache.spark.sql.catalyst.expressions.{Alias, AttributeReference, Expression, NamedExpression, SortOrder}
-import org.apache.spark.sql.catalyst.plans.logical
+import org.apache.spark.sql.catalyst.expressions.aggregate.{
+  AggregateExpression,
+  HyperLogLogPlusPlus
+}
+import org.apache.spark.sql.catalyst.expressions.{
+  Alias,
+  AttributeReference,
+  EqualTo,
+  Expression,
+  NamedExpression,
+  SortOrder
+}
+import org.apache.spark.sql.catalyst.plans.{logical, Inner, JoinType}
 import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, Sort}
 import org.apache.spark.sql.catalyst.plans.physical.HashPartitioning
 import org.apache.spark.sql.execution.{FilterExec, SparkPlan}
@@ -87,6 +104,50 @@ final case class VERewriteStrategy(
             .flatMap(sp => List(VectorEngineToSparkPlan(VeFetchFromCachePlan(sp))))
             .toList
 
+        case j @ logical.Join(
+              leftChild,
+              rightChild,
+              Inner,
+              Some(
+                EqualTo(arl @ AttributeReference(_, _, _, _), arr @ AttributeReference(_, _, _, _))
+              ),
+              _
+            ) =>
+          val inputsLeft = leftChild.output.toList.zipWithIndex.map { case (att, idx) =>
+            sparkTypeToVeType(att.dataType).makeCVector(s"$InputPrefix$idx")
+          }
+          val inputsRight = rightChild.output.toList.zipWithIndex.map { case (att, idx) =>
+            sparkTypeToVeType(att.dataType).makeCVector(s"$InputPrefix$idx")
+          }
+          val genericJoiner = GenericJoiner(
+            inputsLeft = inputsLeft,
+            inputsRight = inputsRight,
+            joins = List(
+              GenericJoiner.Join(
+                inputsLeft(leftChild.output.indexWhere(att => att.exprId == arl.exprId)),
+                inputsRight(leftChild.output.indexWhere(att => att.exprId == arr.exprId))
+              )
+            ),
+            outputs = (inputsLeft ++ inputsRight).map(cv => FilteredOutput(cv.name, cv))
+          )
+
+          val functionName = s"join_${functionPrefix}"
+
+          List(
+            VectorEngineToSparkPlan(
+              VectorEngineJoinPlan(
+                outputExpressions = leftChild.output ++ rightChild.output,
+                veFunction = VeFunction(
+                  veFunctionStatus =
+                    VeFunctionStatus.SourceCode(genericJoiner.produce(functionName).cCode),
+                  functionName = functionName,
+                  results = genericJoiner.outputs.map(_.cVector.veType)
+                ),
+                left = SparkToVectorEnginePlan(planLater(leftChild)),
+                right = SparkToVectorEnginePlan(planLater(rightChild))
+              )
+            )
+          )
         case f @ logical.Filter(condition, child) if options.filterOnVe =>
           implicit val fallback: EvalFallback = EvalFallback.noOp
 
