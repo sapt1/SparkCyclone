@@ -38,6 +38,7 @@ import com.nec.spark.planning.VERewriteStrategy.{GroupPrefix, InputPrefix, Seque
 import com.nec.spark.planning.VeFunction.VeFunctionStatus
 import com.nec.spark.planning.plans._
 import com.nec.ve.GroupingFunction.DataDescription
+import com.nec.ve.GroupingFunction.DataDescription.KeyOrValue
 import com.nec.ve.{GroupingFunction, MergerFunction}
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.sql.catalyst.expressions.aggregate.{
@@ -122,19 +123,21 @@ final case class VERewriteStrategy(
           val inputsRight = rightChild.output.toList.zipWithIndex.map { case (att, idx) =>
             sparkTypeToVeType(att.dataType).makeCVector(s"$InputPrefix$idx")
           }
-          val genericJoiner =
-            try GenericJoiner(
-              inputsLeft = inputsLeft,
-              inputsRight = inputsRight,
-              joins = List(
-                GenericJoiner.Join(
-                  inputsLeft(leftChild.output.indexWhere(att => att.exprId == arl.exprId)),
-                  inputsRight(rightChild.output.indexWhere(att => att.exprId == arr.exprId))
-                )
-              ),
-              outputs = (inputsLeft ++ inputsRight).map(cv => FilteredOutput(cv.name, cv))
+          val joins = List(
+            GenericJoiner.Join(
+              inputsLeft(leftChild.output.indexWhere(att => att.exprId == arl.exprId)),
+              inputsRight(rightChild.output.indexWhere(att => att.exprId == arr.exprId))
             )
-            catch {
+          )
+          val genericJoiner =
+            try {
+              GenericJoiner(
+                inputsLeft = inputsLeft,
+                inputsRight = inputsRight,
+                joins = joins,
+                outputs = (inputsLeft ++ inputsRight).map(cv => FilteredOutput(cv.name, cv))
+              )
+            } catch {
               case e: Throwable =>
                 throw new RuntimeException(s"Condition: ${condition}; ${e}", e)
             }
@@ -144,12 +147,30 @@ final case class VERewriteStrategy(
           val exchangeNameL = s"exchange_l_$functionPrefix"
           val exchangeNameR = s"exchange_r_$functionPrefix"
           val exchangeFunctionL = {
-            val gd = List.empty[DataDescription]
-            GroupingFunction.groupData(data = gd, totalBuckets = 16)
+            GroupingFunction.groupData(
+              data = inputsLeft.map(leftVector =>
+                DataDescription(
+                  veType = leftVector.veType,
+                  keyOrValue =
+                    if (joins.flatMap(_.vecs).contains(leftVector)) KeyOrValue.Key
+                    else KeyOrValue.Value
+                )
+              ),
+              totalBuckets = 16
+            )
           }
           val exchangeFunctionR = {
-            val gd = List.empty[DataDescription]
-            GroupingFunction.groupData(data = gd, totalBuckets = 16)
+            GroupingFunction.groupData(
+              data = inputsRight.map(rightVector =>
+                DataDescription(
+                  veType = rightVector.veType,
+                  keyOrValue =
+                    if (joins.flatMap(_.vecs).contains(rightVector)) KeyOrValue.Key
+                    else KeyOrValue.Value
+                )
+              ),
+              totalBuckets = 16
+            )
           }
 
           val code = CodeLines

@@ -5,6 +5,8 @@ import com.nec.spark.agile.CFunctionGeneration._
 import com.nec.spark.agile.groupby.GroupByOutline.initializeScalarVector
 import com.nec.spark.agile.join.GenericJoiner._
 
+import scala.collection.GenTraversableOnce
+
 final case class GenericJoiner(
   inputsLeft: List[CVector],
   inputsRight: List[CVector],
@@ -82,7 +84,9 @@ object GenericJoiner {
       )
     )
 
-  final case class Join(left: CVector, right: CVector)
+  final case class Join(left: CVector, right: CVector) {
+    def vecs: List[CVector] = List(left, right)
+  }
 
   final case class EqualityPairing(indexOfFirstColumn: String, indexOfSecondColumn: String) {
     def toCondition: String = s"$indexOfFirstColumn[i] == $indexOfSecondColumn[j]"
