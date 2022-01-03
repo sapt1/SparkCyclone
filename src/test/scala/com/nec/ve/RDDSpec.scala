@@ -148,7 +148,9 @@ final class RDDSpec extends AnyFreeSpec with SparkAdditions with VeKernelInfra {
   }
 
   "Exchange data across partitions in cluster mode" in withSparkSession2(
-    VeClusterConfig.andThen(DynamicVeSqlExpressionEvaluationSpec.VeConfiguration)
+    VeClusterConfig
+      .andThen(DynamicVeSqlExpressionEvaluationSpec.VeConfiguration)
+      .andThen(_.config("spark.master", "local[*]"))
   ) { sparkSession =>
     val result =
       compiledWithHeaders(PartitioningFunction.toCodeLinesNoHeaderOutPtr(MultiFunctionName).cCode) {
@@ -165,7 +167,9 @@ final class RDDSpec extends AnyFreeSpec with SparkAdditions with VeKernelInfra {
   }
 
   "Join data across partitioned data" in withSparkSession2(
-    VeClusterConfig.andThen(DynamicVeSqlExpressionEvaluationSpec.VeConfiguration)
+    VeClusterConfig
+      .andThen(DynamicVeSqlExpressionEvaluationSpec.VeConfiguration)
+      .andThen(_.config("spark.master", "local[*]"))
   ) { sparkSession =>
     val partsL: List[(Int, List[Double])] =
       List(1 -> List(3, 4, 5), 2 -> List(5, 6, 7))
