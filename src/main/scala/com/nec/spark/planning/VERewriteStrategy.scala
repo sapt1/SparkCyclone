@@ -125,8 +125,18 @@ final case class VERewriteStrategy(
           }
           val joins = List(
             GenericJoiner.Join(
-              inputsLeft(leftChild.output.indexWhere(att => att.exprId == arl.exprId)),
-              inputsRight(rightChild.output.indexWhere(att => att.exprId == arr.exprId))
+              try {
+                inputsLeft(leftChild.output.indexWhere(att => att.exprId == arl.exprId))
+              } catch {
+                case e: Throwable =>
+                  inputsRight(rightChild.output.indexWhere(att => att.exprId == arr.exprId))
+              },
+              try {
+                inputsRight(rightChild.output.indexWhere(att => att.exprId == arr.exprId))
+              } catch {
+                case e: Throwable =>
+                  inputsLeft(leftChild.output.indexWhere(att => att.exprId == arl.exprId))
+              }
             )
           )
           val genericJoiner =
