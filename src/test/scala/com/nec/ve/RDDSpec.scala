@@ -1,6 +1,7 @@
 package com.nec.ve
 
 import com.eed3si9n.expecty.Expecty.expect
+import com.nec.arrow.ArrowVectorBuilders.withDirectFloat8Vector
 import com.nec.arrow.WithTestAllocator
 import com.nec.spark.agile.CFunctionGeneration
 import com.nec.spark.planning.CEvaluationPlan.HasFieldVector.RichColumnVector
@@ -9,7 +10,14 @@ import com.nec.spark.{SparkAdditions, SparkCycloneExecutorPlugin}
 import com.nec.util.RichVectors.RichFloat8
 import com.nec.ve.DetectVectorEngineSpec.VeClusterConfig
 import com.nec.ve.PureVeFunctions.{DoublingFunction, PartitioningFunction}
-import com.nec.ve.RDDSpec.{doubleBatches, exchangeBatches, longBatches, MultiFunctionName}
+import com.nec.ve.RDDSpec.{
+  doubleBatches,
+  exchangeBatches,
+  longBatches,
+  MultiFunctionName,
+  RichDoubleList,
+  RichVeColVector
+}
 import com.nec.ve.VeColBatch.{VeColVector, VeColVectorSource}
 import com.nec.ve.VeProcess.{DeferredVeProcess, WrappingVeo}
 import com.nec.ve.VeRDD.RichKeyedRDD
@@ -156,9 +164,76 @@ final class RDDSpec extends AnyFreeSpec with SparkAdditions with VeKernelInfra {
     expect(result == expected)
   }
 
+  "Join data across partitioned data" in withSparkSession2(
+    VeClusterConfig.andThen(DynamicVeSqlExpressionEvaluationSpec.VeConfiguration)
+  ) { sparkSession =>
+    val partsL: List[(Int, List[Double])] =
+      List(1 -> List(3, 4, 5), 2 -> List(5, 6, 7))
+    val partsR: List[(Int, List[Double])] =
+      List(1 -> List(5, 6, 7), 2 -> List(8, 8, 7), 3 -> List(9, 6, 7))
+    import SparkCycloneExecutorPlugin._
+    val listAllItems = VeRDD
+      .joinExchangeLB(
+        sparkSession.sparkContext.makeRDD(partsL).map { case (i, l) =>
+          i -> VeColBatch.fromList(List(l.toVeColVector()))
+        },
+        sparkSession.sparkContext.makeRDD(partsR).map { case (i, l) =>
+          i -> VeColBatch.fromList(List(l.toVeColVector()))
+        }
+      )
+      .map { case (la, lb) =>
+        (la.map(_.toList[Double]), la.map(_.toList[Double]))
+      }
+      .collect()
+      .toList
+
+    val expected: List[(List[Double], List[Double])] =
+      List(
+        List[Double](3, 4, 5) -> List[Double](5, 6, 7),
+        List[Double](5, 6, 7) -> List[Double](8, 8, 7)
+      )
+
+    assert(listAllItems == expected)
+  }
+
 }
 
 object RDDSpec {
+
+  implicit class RichDoubleList(l: List[Double]) {
+    def toVeColVector()(implicit veProcess: VeProcess, source: VeColVectorSource): VeColVector = {
+      WithTestAllocator { implicit alloc =>
+        withDirectFloat8Vector(l) { vec =>
+          VeColVector.fromFloat8Vector(vec)
+        }
+      }
+    }
+  }
+
+  trait ColVectorDecoder[T] {
+    def decode(
+      veColVector: VeColVector
+    )(implicit veProcess: VeProcess, source: VeColVectorSource): List[T]
+  }
+  object ColVectorDecoder {
+    implicit val decodeDouble: ColVectorDecoder[Double] = new ColVectorDecoder[Double] {
+      override def decode(
+        veColVector: VeColVector
+      )(implicit veProcess: VeProcess, source: VeColVectorSource): List[Double] = {
+        WithTestAllocator { implicit alloc =>
+          veColVector.toArrowVector().asInstanceOf[Float8Vector].toList
+        }
+      }
+    }
+  }
+  implicit class RichVeColVector(veColVector: VeColVector) {
+    def toList[T: ColVectorDecoder](implicit
+      veProcess: VeProcess,
+      source: VeColVectorSource
+    ): List[T] =
+      implicitly[ColVectorDecoder[T]].decode(veColVector)
+  }
+
   val MultiFunctionName = "f_multi"
 
   private def exchangeBatches(sparkSession: SparkSession, pathStr: String): RDD[Double] = {
