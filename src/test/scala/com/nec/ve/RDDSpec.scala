@@ -14,6 +14,7 @@ import com.nec.ve.RDDSpec.{
   doubleBatches,
   exchangeBatches,
   longBatches,
+  testJoin,
   MultiFunctionName,
   RichDoubleList,
   RichVeColVector
@@ -165,16 +166,36 @@ final class RDDSpec extends AnyFreeSpec with SparkAdditions with VeKernelInfra {
     expect(result == expected)
   }
 
-  "Join data across partitioned data" in withSparkSession2(
-    VeClusterConfig
-      .andThen(DynamicVeSqlExpressionEvaluationSpec.VeConfiguration)
-  ) { sparkSession =>
+  "Join data across partitioned data" in {
+    val result =
+      withSparkSession2(
+        VeClusterConfig
+          .andThen(DynamicVeSqlExpressionEvaluationSpec.VeConfiguration)
+      ) { sparkSession =>
+        testJoin(sparkSession)
+      }
+
+    val expected: List[(List[Double], List[Double])] =
+      List(
+        List[Double](3, 4, 5) -> List[Double](5, 6, 7),
+        List[Double](5, 6, 7) -> List[Double](8, 8, 7)
+      )
+
+    assert(result == expected)
+  }
+
+}
+
+object RDDSpec {
+
+  def testJoin(sparkSession: SparkSession): List[(List[List[Double]], List[List[Double]])] = {
+
     val partsL: List[(Int, List[Double])] =
       List(1 -> List(3, 4, 5), 2 -> List(5, 6, 7))
     val partsR: List[(Int, List[Double])] =
       List(1 -> List(5, 6, 7), 2 -> List(8, 8, 7), 3 -> List(9, 6, 7))
     import SparkCycloneExecutorPlugin._
-    val listAllItems = VeRDD
+    VeRDD
       .joinExchangeLB(
         sparkSession.sparkContext.makeRDD(partsL).map { case (i, l) =>
           i -> VeColBatch.fromList(List(l.toVeColVector()))
@@ -188,19 +209,7 @@ final class RDDSpec extends AnyFreeSpec with SparkAdditions with VeKernelInfra {
       }
       .collect()
       .toList
-
-    val expected: List[(List[Double], List[Double])] =
-      List(
-        List[Double](3, 4, 5) -> List[Double](5, 6, 7),
-        List[Double](5, 6, 7) -> List[Double](8, 8, 7)
-      )
-
-    assert(listAllItems == expected)
   }
-
-}
-
-object RDDSpec {
 
   implicit class RichDoubleList(l: List[Double]) {
     def toVeColVector()(implicit veProcess: VeProcess, source: VeColVectorSource): VeColVector = {
