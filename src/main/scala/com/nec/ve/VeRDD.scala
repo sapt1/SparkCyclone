@@ -51,6 +51,64 @@ object VeRDD extends LazyLogging {
           },
         preservesPartitioning = true
       )
+
+  def joinExchangeLB(
+    left: RDD[(Int, VeColBatch)],
+    right: RDD[(Int, VeColBatch)]
+  ): RDD[(List[VeColVector], List[VeColVector])] = {
+    joinExchangeL(left.map { case (k, b) => k -> b.cols }, right.map { case (k, b) => k -> b.cols })
+  }
+  def joinExchangeL(
+    left: RDD[(Int, List[VeColVector])],
+    right: RDD[(Int, List[VeColVector])]
+  ): RDD[(List[VeColVector], List[VeColVector])] = {
+    {
+      val leftPts = left
+        .mapPartitions(
+          f = iter =>
+            iter.map { case (p, v) =>
+              import com.nec.spark.SparkCycloneExecutorPlugin.veProcess
+              logger.debug(s"Preparing to serialize batch ${v}")
+              val r = (p, (v, v.map(_.serialize())))
+              logger.debug(s"Completed serializing batch ${v} (${r._2._2.map(_.length)} bytes)")
+              r
+            },
+          preservesPartitioning = true
+        )
+      val rightPts = left
+        .mapPartitions(
+          f = iter =>
+            iter.map { case (p, v) =>
+              import com.nec.spark.SparkCycloneExecutorPlugin.veProcess
+              logger.debug(s"Preparing to serialize batch ${v}")
+              val r = (p, (v, v.map(_.serialize())))
+              logger.debug(s"Completed serializing batch ${v} (${r._2._2.map(_.length)} bytes)")
+              r
+            },
+          preservesPartitioning = true
+        )
+
+      leftPts.join(rightPts).repartitionByKey().map { case (_, ((v1, ba1), (v2, ba2))) =>
+        val first = v1.zip(ba1).map { case (vv, bb) =>
+          logger.debug(s"Preparing to deserialize batch ${vv}")
+          import com.nec.spark.SparkCycloneExecutorPlugin.veProcess
+          val res = vv.deserialize(bb)
+          logger.debug(s"Completed deserializing batch ${vv} --> ${res}")
+          res
+        }
+        val second = v2.zip(ba2).map { case (vv, bb) =>
+          logger.debug(s"Preparing to deserialize batch ${vv}")
+          import com.nec.spark.SparkCycloneExecutorPlugin.veProcess
+          val res = vv.deserialize(bb)
+          logger.debug(s"Completed deserializing batch ${vv} --> ${res}")
+          res
+        }
+
+        (first, second)
+      }
+    }
+  }
+
   def exchangeLS(rdd: RDD[(Int, List[VeColVector])])(implicit
     veProcess: VeProcess
   ): RDD[List[VeColVector]] =

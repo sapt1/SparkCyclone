@@ -40,6 +40,7 @@ trait SupportsVeColBatch { this: SparkPlan =>
    */
   def dataCleanup: DataCleanup = DataCleanup.Cleanup
   def executeVeColumnar(): RDD[VeColBatch]
+
   final override protected def doExecute(): RDD[InternalRow] =
     sys.error("Cannot execute plan without a VE wrapper")
   final override protected def doExecuteColumnar(): RDD[ColumnarBatch] =

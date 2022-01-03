@@ -1,7 +1,12 @@
 package com.nec.spark.planning.plans
 
-import com.nec.spark.planning.{PlanCallsVeFunction, SupportsVeColBatch, VeFunction}
-import com.nec.ve.VeColBatch
+import com.nec.spark.planning.{
+  PlanCallsVeFunction,
+  SupportsKeyedVeColBatch,
+  SupportsVeColBatch,
+  VeFunction
+}
+import com.nec.ve.{VeColBatch, VeRDD}
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.TaskContext
 import org.apache.spark.rdd.RDD
@@ -20,43 +25,35 @@ case class VectorEngineJoinPlan(
   with PlanCallsVeFunction {
 
   override def executeVeColumnar(): RDD[VeColBatch] =
-    left
-      .asInstanceOf[SupportsVeColBatch]
-      .executeVeColumnar()
-      .zipPartitions(right.asInstanceOf[SupportsVeColBatch].executeVeColumnar()) {
-        case (leftCB, rightCB) =>
-          logger.info(s"Will map multiple col batches for hash exchange.")
-          import com.nec.spark.SparkCycloneExecutorPlugin.veProcess
-          import com.nec.spark.SparkCycloneExecutorPlugin.source
-          withVeLibrary { libRefJoin =>
-            val leftColumnBatches = leftCB.toList
-
-            TaskContext.get().addTaskCompletionListener[Unit] { _ =>
-              Option(leftColumnBatches).toList.flatten
-                .foreach(leftColBatch =>
-                  left.asInstanceOf[SupportsVeColBatch].dataCleanup.cleanup(leftColBatch)
-                )
-            }
-
-            rightCB.flatMap { rightColBatch =>
-              try {
-                leftColumnBatches.flatMap { leftColBatch =>
-                  logger.debug(s"Mapping ${leftColBatch} / ${rightColBatch} for join")
-                  val batch = veProcess.execute(
-                    libraryReference = libRefJoin,
-                    functionName = joinFunction.functionName,
-                    cols = leftColBatch.cols ++ rightColBatch.cols,
-                    results = joinFunction.results
-                  )
-                  logger.debug(s"Completed ${leftColBatch} / ${rightColBatch} => ${batch}.")
-                  Option(VeColBatch.fromList(batch)).filter(_.nonEmpty).toList
-                }
-              } finally {
-                right.asInstanceOf[SupportsVeColBatch].dataCleanup.cleanup(rightColBatch)
+    VeRDD
+      .joinExchangeLB(
+        left = left.asInstanceOf[SupportsKeyedVeColBatch].executeVeColumnarKeyed(),
+        right = left.asInstanceOf[SupportsKeyedVeColBatch].executeVeColumnarKeyed()
+      )
+      .mapPartitions { iterL =>
+        logger.info(s"Will map multiple col batches for hash exchange.")
+        import com.nec.spark.SparkCycloneExecutorPlugin.veProcess
+        import com.nec.spark.SparkCycloneExecutorPlugin.source
+        withVeLibrary { libRefJoin =>
+          iterL.map { case (leftListVcv, rightListVcv) =>
+            val leftColBatch = VeColBatch.fromList(leftListVcv)
+            val rightColBatch = VeColBatch.fromList(rightListVcv)
+            logger.debug(s"Mapping ${leftColBatch} / ${rightColBatch} for join")
+            val batch =
+              try veProcess.execute(
+                libraryReference = libRefJoin,
+                functionName = joinFunction.functionName,
+                cols = leftColBatch.cols ++ rightColBatch.cols,
+                results = joinFunction.results
+              )
+              finally {
+                dataCleanup.cleanup(leftColBatch)
+                dataCleanup.cleanup(rightColBatch)
               }
-            }
-
+            logger.debug(s"Completed ${leftColBatch} / ${rightColBatch} => ${batch}.")
+            VeColBatch.fromList(batch)
           }
+        }
       }
 
   override def updateVeFunction(f: VeFunction => VeFunction): SparkPlan =
