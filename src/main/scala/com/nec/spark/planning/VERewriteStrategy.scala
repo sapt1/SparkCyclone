@@ -118,10 +118,10 @@ final case class VERewriteStrategy(
               _
             ) =>
           val inputsLeft = leftChild.output.toList.zipWithIndex.map { case (att, idx) =>
-            sparkTypeToVeType(att.dataType).makeCVector(s"L_$InputPrefix$idx")
+            sparkTypeToVeType(att.dataType).makeCVector(s"l_$InputPrefix$idx")
           }
           val inputsRight = rightChild.output.toList.zipWithIndex.map { case (att, idx) =>
-            sparkTypeToVeType(att.dataType).makeCVector(s"R_$InputPrefix$idx")
+            sparkTypeToVeType(att.dataType).makeCVector(s"r_$InputPrefix$idx")
           }
           val joins =
             try {
@@ -149,7 +149,7 @@ final case class VERewriteStrategy(
                 inputsLeft = inputsLeft,
                 inputsRight = inputsRight,
                 joins = joins,
-                outputs = (inputsLeft ++ inputsRight).map(cv => FilteredOutput(s"O_${cv.name}", cv))
+                outputs = (inputsLeft ++ inputsRight).map(cv => FilteredOutput(s"o_${cv.name}", cv))
               )
             } catch {
               case e: Throwable =>
