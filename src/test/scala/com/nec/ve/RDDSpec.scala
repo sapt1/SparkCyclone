@@ -173,7 +173,7 @@ final class RDDSpec extends AnyFreeSpec with SparkAdditions with VeKernelInfra {
           .andThen(DynamicVeSqlExpressionEvaluationSpec.VeConfiguration)
       ) { sparkSession =>
         testJoin(sparkSession)
-      }
+      }.sortBy(_._1.head)
 
     val expected: List[(List[Double], List[Double])] =
       List(
@@ -188,7 +188,7 @@ final class RDDSpec extends AnyFreeSpec with SparkAdditions with VeKernelInfra {
 
 object RDDSpec {
 
-  def testJoin(sparkSession: SparkSession): List[(List[List[Double]], List[List[Double]])] = {
+  def testJoin(sparkSession: SparkSession): List[(List[Double], List[Double])] = {
 
     val partsL: List[(Int, List[Double])] =
       List(1 -> List(3, 4, 5), 2 -> List(5, 6, 7))
@@ -205,7 +205,7 @@ object RDDSpec {
         }
       )
       .map { case (la, lb) =>
-        (la.map(_.toList[Double]), la.map(_.toList[Double]))
+        (la.flatMap(_.toList[Double]), la.flatMap(_.toList[Double]))
       }
       .collect()
       .toList
