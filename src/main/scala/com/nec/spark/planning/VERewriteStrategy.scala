@@ -149,7 +149,7 @@ final case class VERewriteStrategy(
                 inputsLeft = inputsLeft,
                 inputsRight = inputsRight,
                 joins = joins,
-                outputs = (inputsLeft ++ inputsRight).map(cv => FilteredOutput(cv.name, cv))
+                outputs = (inputsLeft ++ inputsRight).map(cv => FilteredOutput(s"O_${cv.name}", cv))
               )
             } catch {
               case e: Throwable =>
