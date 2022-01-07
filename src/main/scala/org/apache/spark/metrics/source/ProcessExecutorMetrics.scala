@@ -8,12 +8,24 @@ import scala.collection.mutable.ArrayBuffer
 final class ProcessExecutorMetrics() extends VeProcessMetrics with Source {
   private val allocations: scala.collection.mutable.Map[Long, Long] = mutable.Map.empty
   private val veCalls: ArrayBuffer[Long] =  new ArrayBuffer[Long]()
+  private var totalTransferTime: Long = 0L
+  private var totalSerializationTime: Long = 0L
 
   override def registerAllocation(amount: Long, position: Long): Unit =
     allocations.put(position, amount)
 
+  override def increaseSerializationTime(increaseBy: Long): Unit = {
+    totalSerializationTime += increaseBy
+  }
+
+  override def increaseTransferTime(increaseBy: Long): Unit = {
+    totalTransferTime += increaseBy
+  }
+
   override def deregisterAllocation(position: Long): Unit =
     allocations.remove(position)
+
+  override def registerVeCall(timeTaken: Long): Unit = veCalls.append(timeTaken)
 
   override def sourceName: String = "VEProcessExecutor"
 
@@ -23,6 +35,20 @@ final class ProcessExecutorMetrics() extends VeProcessMetrics with Source {
     MetricRegistry.name("ve", "allocations"),
     new Gauge[Long] {
       override def getValue: Long = allocations.size
+    }
+  )
+
+  metricRegistry.register(
+    MetricRegistry.name("ve", "serializationTime"),
+    new Gauge[Long] {
+      override def getValue: Long = totalSerializationTime
+    }
+  )
+
+  metricRegistry.register(
+    MetricRegistry.name("ve", "transferTime"),
+    new Gauge[Long] {
+      override def getValue: Long = totalTransferTime
     }
   )
 

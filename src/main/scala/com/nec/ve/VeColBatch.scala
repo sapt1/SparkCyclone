@@ -1,38 +1,21 @@
 package com.nec.ve
 
-import com.nec.arrow.ArrowTransferStructures.{
-  nullable_bigint_vector,
-  nullable_double_vector,
-  nullable_int_vector,
-  nullable_varchar_vector
-}
-import com.nec.arrow.VeArrowTransfers.{
-  nullableBigintVectorToByteBuffer,
-  nullableDoubleVectorToByteBuffer,
-  nullableIntVectorToByteBuffer,
-  nullableVarCharVectorVectorToByteBuffer
-}
+import com.nec.arrow.ArrowTransferStructures.{nullable_bigint_vector, nullable_double_vector, nullable_int_vector, nullable_varchar_vector}
+import com.nec.arrow.VeArrowTransfers.{nullableBigintVectorToByteBuffer, nullableDoubleVectorToByteBuffer, nullableIntVectorToByteBuffer, nullableVarCharVectorVectorToByteBuffer}
 import com.nec.spark.agile.CFunctionGeneration.{VeScalarType, VeString, VeType}
 import com.nec.spark.agile.SparkExpressionToCExpression.likelySparkType
 import com.nec.spark.planning.CEvaluationPlan.HasFieldVector.RichColumnVector
 import com.nec.spark.planning.VeColColumnarVector
 import com.nec.ve.VeColBatch.VeColVector
 import org.apache.arrow.memory.BufferAllocator
-import org.apache.arrow.vector.{
-  BigIntVector,
-  DateDayVector,
-  FieldVector,
-  Float8Vector,
-  IntVector,
-  SmallIntVector,
-  ValueVector,
-  VarCharVector
-}
+import org.apache.arrow.vector.{BigIntVector, DateDayVector, FieldVector, Float8Vector, IntVector, SmallIntVector, ValueVector, VarCharVector}
 
 import org.apache.spark.sql.vectorized.{ArrowColumnVector, ColumnVector, ColumnarBatch}
 import sun.misc.Unsafe
 import sun.nio.ch.DirectBuffer
 import java.nio.ByteBuffer
+
+import com.nec.spark.SparkCycloneExecutorPlugin
 
 import org.apache.spark.sql.util.ArrowUtilsExposed.RichSmallIntVector
 
@@ -96,13 +79,17 @@ object VeColBatch {
   def fromArrowColumnarBatch(
     columnarBatch: ColumnarBatch
   )(implicit veProcess: VeProcess, source: VeColVectorSource): VeColBatch = {
-    VeColBatch(
+    val start = System.currentTimeMillis()
+    val results = VeColBatch(
       numRows = columnarBatch.numRows(),
       cols = (0 until columnarBatch.numCols()).map { colNo =>
         val col = columnarBatch.column(colNo)
         VeColVector.fromVectorColumn(numRows = columnarBatch.numRows(), source = col)
       }.toList
     )
+    val end = System.currentTimeMillis()
+    SparkCycloneExecutorPlugin.metrics.increaseTransferTime(end - start)
+    results
   }
 
   private def getUnsafe: Unsafe = {

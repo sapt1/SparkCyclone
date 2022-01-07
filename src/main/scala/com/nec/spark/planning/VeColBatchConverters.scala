@@ -74,6 +74,7 @@ object VeColBatchConverters {
               }
 
               override def next(): UnInternalVeColBatch = {
+                val start = System.currentTimeMillis()
                 arrowWriter.reset()
                 cb.setNumRows(0)
                 root.getFieldVectors.asScala.foreach(_.reset())
@@ -85,6 +86,8 @@ object VeColBatchConverters {
                   rowCount += 1
                 }
                 cb.setNumRows(rowCount)
+                val end = System.currentTimeMillis()
+                SparkCycloneExecutorPlugin.metrics.increaseSerializationTime(end - start)
                 //              numInputRows += rowCount
                 //              numOutputBatches += 1
                 import SparkCycloneExecutorPlugin.veProcess

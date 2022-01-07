@@ -44,25 +44,27 @@ class VeCachedBatchSerializer extends org.apache.spark.sql.columnar.CachedBatchS
     schema: Seq[Attribute],
     storageLevel: StorageLevel,
     conf: SQLConf
-  ): RDD[CachedBatch] = VeColBatchConverters
-    .internalRowToVeColBatch(
-      input,
-      conf.sessionLocalTimeZone,
-      StructType(
-        schema.map(att =>
-          StructField(
-            name = att.name,
-            dataType = att.dataType,
-            nullable = att.nullable,
-            metadata = att.metadata
+  ): RDD[CachedBatch] ={
+    VeColBatchConverters
+      .internalRowToVeColBatch(
+        input,
+        conf.sessionLocalTimeZone,
+        StructType(
+          schema.map(att =>
+            StructField(
+              name = att.name,
+              dataType = att.dataType,
+              nullable = att.nullable,
+              metadata = att.metadata
+            )
           )
-        )
-      ),
-      VeColBatchConverters.getNumRows(input.sparkContext, conf)
-    )
-    .map { ui =>
-      CachedVeBatch(ui.veColBatch)
-    }
+        ),
+        VeColBatchConverters.getNumRows(input.sparkContext, conf)
+      )
+      .map { ui =>
+        CachedVeBatch(ui.veColBatch)
+      }
+  }
 
   override def convertColumnarBatchToCachedBatch(
     input: RDD[ColumnarBatch],

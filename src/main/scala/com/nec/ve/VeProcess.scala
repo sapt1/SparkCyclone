@@ -181,7 +181,11 @@ object VeProcess {
         s"Expected > 0, but got ${functionAddr} when looking up function '${functionName}' in $libraryReference"
       )
 
+      val start = System.currentTimeMillis()
       val callRes = veo.veo_call_sync(veo_proc_handle, functionAddr, our_args, fnCallResult)
+
+      val end = System.currentTimeMillis()
+      SparkCycloneExecutorPlugin.metrics.registerVeCall(end - start)
 
       require(
         callRes == 0,
