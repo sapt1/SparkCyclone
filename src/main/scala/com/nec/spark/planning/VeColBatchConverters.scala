@@ -1,26 +1,22 @@
 package com.nec.spark.planning
 
-import com.nec.cmake.{ScalaTcpDebug, Spanner}
+import scala.collection.JavaConverters.asScalaBufferConverter
+
 import com.nec.spark.SparkCycloneExecutorPlugin
 import com.nec.spark.SparkCycloneExecutorPlugin.source
-import com.nec.spark.planning.ArrowBatchToUnsafeRows.mapBatchToRow
 import com.nec.ve.VeColBatch
-import com.nec.ve.VeKernelCompiler.VeCompilerConfig
 import org.apache.arrow.memory.BufferAllocator
 import org.apache.arrow.vector.VectorSchemaRoot
-import org.apache.spark.internal.Logging
+
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.catalyst.expressions.Attribute
 import org.apache.spark.sql.execution.arrow.ArrowWriter
-import org.apache.spark.sql.execution.{SparkPlan, UnaryExecNode}
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.util.ArrowUtilsExposed
 import org.apache.spark.sql.vectorized.{ArrowColumnVector, ColumnarBatch, DualMode}
-import org.apache.spark.{SparkContext, SparkEnv, TaskContext}
-
-import scala.collection.JavaConverters.asScalaBufferConverter
+import org.apache.spark.{SparkContext, TaskContext}
+import SparkCycloneExecutorPlugin.metrics.{measureRunningTime, registerConversionTime}
 
 object VeColBatchConverters {
 
@@ -75,21 +71,20 @@ object VeColBatchConverters {
 
               override def next(): UnInternalVeColBatch = {
                 val start = System.currentTimeMillis()
-                arrowWriter.reset()
-                cb.setNumRows(0)
-                root.getFieldVectors.asScala.foreach(_.reset())
-                var rowCount = 0
-                while (rowCount < numRows && rowIterator.hasNext) {
-                  val row = rowIterator.next()
-                  arrowWriter.write(row)
-                  arrowWriter.finish()
-                  rowCount += 1
-                }
-                cb.setNumRows(rowCount)
-                val end = System.currentTimeMillis()
-                SparkCycloneExecutorPlugin.metrics.increaseSerializationTime(end - start)
-                //              numInputRows += rowCount
-                //              numOutputBatches += 1
+                measureRunningTime {
+                  arrowWriter.reset()
+                  cb.setNumRows(0)
+                  root.getFieldVectors.asScala.foreach(_.reset())
+                  var rowCount = 0
+                  while (rowCount < numRows && rowIterator.hasNext) {
+                    val row = rowIterator.next()
+                    arrowWriter.write(row)
+                    arrowWriter.finish()
+                    rowCount += 1
+                  }
+                  cb.setNumRows(rowCount)
+                }(registerConversionTime)
+
                 import SparkCycloneExecutorPlugin.veProcess
                 val newBatch =
                   try UnInternalVeColBatch(veColBatch = VeColBatch.fromArrowColumnarBatch(cb))

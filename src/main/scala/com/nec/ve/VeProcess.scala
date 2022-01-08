@@ -9,6 +9,7 @@ import com.typesafe.scalalogging.LazyLogging
 import org.bytedeco.javacpp.{BytePointer, IntPointer, LongPointer}
 import org.bytedeco.veoffload.global.veo
 import org.bytedeco.veoffload.veo_proc_handle
+import SparkCycloneExecutorPlugin.metrics.{registerVeCall, measureRunningTime}
 
 import java.nio.{ByteBuffer, ByteOrder}
 import java.nio.file.Path
@@ -174,18 +175,16 @@ object VeProcess {
       }
       val fnCallResult = new LongPointer(1)
 
-      val functionAddr = veo.veo_get_sym(veo_proc_handle, libraryReference.value, functionName)
+      val functionAddr = measureRunningTime(
+        veo.veo_get_sym(veo_proc_handle, libraryReference.value, functionName)
+      )(registerVeCall)
 
       require(
         functionAddr > 0,
         s"Expected > 0, but got ${functionAddr} when looking up function '${functionName}' in $libraryReference"
       )
 
-      val start = System.currentTimeMillis()
-      val callRes = veo.veo_call_sync(veo_proc_handle, functionAddr, our_args, fnCallResult)
-
-      val end = System.currentTimeMillis()
-      SparkCycloneExecutorPlugin.metrics.registerVeCall(end - start)
+      val callRes =  veo.veo_call_sync(veo_proc_handle, functionAddr, our_args, fnCallResult)
 
       require(
         callRes == 0,
