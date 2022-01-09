@@ -166,6 +166,8 @@ def veFilter(name: String): Boolean = name.startsWith("com.nec.ve")
 VectorEngine / fork := true
 VectorEngine / run / fork := false
 
+Test / fork := true
+
 /** This generates a file 'java.hprof.txt' in the project root for very simple profiling. * */
 VectorEngine / run / javaOptions ++= {
   // The feature was removed in JDK9, however for Spark we must support JDK8
@@ -431,19 +433,17 @@ lazy val buildHostLibrary = settingKey[Boolean]("Build host library")
 lazy val buildVeLibrary = settingKey[Boolean]("Build VE library")
 
 buildVeLibrary := CMakeBuilder.hasNcc
-buildHostLibrary := !CMakeBuilder.isWin
+buildHostLibrary := true
 
 Compile / resourceGenerators += Def.taskDyn {
-  val default = cycloneVeLibrary.taskValue
-  if (buildVeLibrary.value) Def.task(default.value)
+  if (buildVeLibrary.value) cycloneVeLibrary.toTask
   else Def.task(Seq.empty[File])
-}
+}.taskValue
 
 Compile / resourceGenerators += Def.taskDyn {
-  val default = cycloneHostLibrary.taskValue
-  if (buildHostLibrary.value) Def.task(default.value)
+  if (buildHostLibrary.value) cycloneHostLibrary.toTask
   else Def.task(Seq.empty[File])
-}
+}.taskValue
 
 lazy val cycloneVeLibrary = taskKey[Seq[File]]("Cyclone VE library")
 lazy val cycloneHostLibrary = taskKey[Seq[File]]("Cyclone native library")
@@ -472,12 +472,11 @@ cycloneVeLibrary := {
     in.find(_.toString.contains("Makefile")) match {
       case Some(makefile) =>
         Process(command = Seq("make", "cyclone-ve.so"), cwd = makefile.getParentFile) ! logger
-        val cycloneVeLibraryDir = (Compile / resourceManaged).value / "cyclone-ve"
+        val cycloneVeLibraryDir = (Compile / resourceManaged).value / "cycloneve"
         val filesToCopy = {
-          in.filter(_.toString.endsWith(".hpp")) + (new File(
-            makefile.getParentFile,
-            "cyclone-ve.so"
-          ))
+          in.filter(fs =>
+            fs.toString.endsWith(".hpp") || fs.toString.endsWith(".incl")
+          ) + (new File(makefile.getParentFile, "cyclone-ve.so"))
         }
         IO.createDirectory(cycloneVeLibraryDir)
         filesToCopy.flatMap { sourceFile =>
@@ -520,10 +519,12 @@ cycloneHostLibrary := {
           command = builder.buildLibrary(copiedCMakeLists.toPath),
           cwd = copiedCMakeLists.getParentFile
         ) ! logger
-        val cycloneVeLibraryDir = (Compile / resourceManaged).value / "cyclone-host"
+        val cycloneVeLibraryDir = (Compile / resourceManaged).value / "cyclonehost"
         IO.assertAbsolute(builder.resolveNative(copiedCMakeLists.toPath).toFile.getAbsoluteFile)
         val filesToCopy = {
-          copies.filter(_.toString.endsWith(".hpp")) + builder
+          copies.filter(fs =>
+            fs.toString.endsWith(".hpp") || fs.toString.endsWith(".incl")
+          ) + builder
             .resolveNative(copiedCMakeLists.toPath)
             .toFile
         }
