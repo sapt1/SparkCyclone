@@ -56,6 +56,8 @@ final class ProcessExecutorMetrics extends VeProcessMetrics with Source {
     }
   )
 
+  metricRegistry.register(MetricRegistry.name("ve", "arrowConversionTimeHist"), arrowConversionHist)
+
   metricRegistry.register(
     MetricRegistry.name("ve", "transferTime"),
     new Gauge[Long] {
