@@ -36,10 +36,25 @@
 #include "frovedis/text/parsedatetime.hpp"
 #include "frovedis/text/datetime_utility.hpp"
 
-static std::string utcnanotime();
-inline void log(std::string msg);
-inline void set_validity(uint64_t *validityBuffer, int32_t idx, int32_t validity);
-inline uint64_t check_valid(uint64_t *validityBuffer, int32_t idx);
+std::string utcnanotime();
+inline void log(std::string msg) {
+    std::cout << utcnanotime().c_str() << " " << msg.c_str() << std::endl;
+}
+inline void set_validity(uint64_t *validityBuffer, int32_t idx, int32_t validity) {
+    int32_t byte = idx / 64;
+    int32_t bitIndex = idx % 64;
+    if (validity) {
+        validityBuffer[byte] |= (1UL << bitIndex);
+    } else {
+        validityBuffer[byte] &= ~(1UL << bitIndex);
+    }
+}
+inline uint64_t check_valid(uint64_t *validityBuffer, int32_t idx) {
+    uint64_t byte = idx / 64;
+    uint64_t bitIndex = idx % 64;
+    uint64_t res = (validityBuffer[byte] >> bitIndex) & 1;
+    return res;
+}
 frovedis::words data_offsets_to_words(const char *data, const int32_t *offsets, const int32_t size, const int32_t count);
 frovedis::words varchar_vector_to_words(const non_null_varchar_vector *v);
 frovedis::words varchar_vector_to_words(const nullable_varchar_vector *v);
