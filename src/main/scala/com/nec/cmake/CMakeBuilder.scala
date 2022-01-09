@@ -26,7 +26,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import scala.sys.process._
-import com.nec.arrow.TransferDefinitions
 import com.nec.cmake.CMakeBuilder.Builder
 import com.nec.spark.agile.CppResource.CppResources
 import com.typesafe.scalalogging.LazyLogging

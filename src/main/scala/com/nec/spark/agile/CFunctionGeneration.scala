@@ -448,6 +448,9 @@ object CFunctionGeneration {
     hasSets: Boolean = false
   ) {
     def toCodeLinesSPtr(functionName: String): CodeLines = CodeLines.from(
+      """#include "transfer-definitions.hpp"""",
+      """#include "cyclone.hpp"""",
+      """#include "cyclone.cc"""",
       "#include <cmath>",
       "#include <bitset>",
       "#include <string>",
@@ -498,6 +501,9 @@ object CFunctionGeneration {
 
     def toCodeLinesG(functionName: String): CodeLines = {
       CodeLines.from(
+        """#include "transfer-definitions.hpp"""",
+        """#include "cyclone.hpp"""",
+        """#include "cyclone.cc"""",
         "#include <cmath>",
         "#include <bitset>",
         "#include <string>",
@@ -510,6 +516,9 @@ object CFunctionGeneration {
     }
     def toCodeLinesJ(functionName: String): CodeLines = {
       CodeLines.from(
+        """#include "transfer-definitions.hpp"""",
+        """#include "cyclone.hpp"""",
+        """#include "cyclone.cc"""",
         "#include <cmath>",
         "#include <bitset>",
         "#include <string>",
