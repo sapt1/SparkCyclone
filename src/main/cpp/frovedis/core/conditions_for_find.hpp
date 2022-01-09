@@ -2,7 +2,10 @@
 #define _CONDITIONS_FOR_FIND_
 
 #include <limits>
-
+#include <stdlib.h>
+#include <stdio.h>
+#include <vector>
+#include <iostream>
 namespace frovedis {
 
 template <class T>
