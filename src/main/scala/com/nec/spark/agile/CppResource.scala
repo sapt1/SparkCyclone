@@ -52,6 +52,18 @@ object CppResource {
         .map(r => CppResource(r))
         .toSet
     })
+    lazy val AllVe: CppResources = CppResources({
+      import org.reflections.Reflections
+      val reflections = new Reflections(CppPrefix, new ResourcesScanner)
+      import scala.collection.JavaConverters._
+      reflections
+        .getResources(Pattern.compile(".*"))
+        .asScala
+        .toList
+        .map(_.drop(CppPrefix.length).drop(1))
+        .map(r => CppResource(r))
+        .toSet
+    })
   }
 
 }
