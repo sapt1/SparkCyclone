@@ -427,22 +427,24 @@ lazy val `tpcbench-run` = project
   )
   .dependsOn(tracing)
 
-Compile / resourceGenerators += cycloneVeLibrary.taskValue
+Compile / resourceGenerators += cycloneVeLibrary.taskValue.map(_.toSeq)
 
-lazy val cycloneVeLibrary = taskKey[Seq[File]]("Cyclone VE library file (.so)")
+lazy val cycloneVeLibrary = taskKey[Set[File]]("Cyclone VE library file (.so)")
 
 lazy val cycloneVeLibrarySources = taskKey[Seq[File]]("Cyclone VE library sources")
 
 cycloneVeLibrarySources :=
   sbt.nio.file.FileTreeView.default
-    .list(Seq(
-      Glob(baseDirectory.value.toString + "/src/main/cpp/*.hpp"),
-      Glob(baseDirectory.value.toString + "/src/main/cpp/*.cc"),
-      Glob(baseDirectory.value.toString + "/src/main/cpp/frovedis/core/*"),
-      Glob(baseDirectory.value.toString + "/src/main/cpp/frovedis/dataframe/*"),
-      Glob(baseDirectory.value.toString + "/src/main/cpp/frovedis/text/*"),
-      Glob(baseDirectory.value.toString + "/src/main/cpp/Makefile"),
-    ))
+    .list(
+      Seq(
+        Glob(baseDirectory.value.toString + "/src/main/cpp/*.hpp"),
+        Glob(baseDirectory.value.toString + "/src/main/cpp/*.cc"),
+        Glob(baseDirectory.value.toString + "/src/main/cpp/frovedis/core/*"),
+        Glob(baseDirectory.value.toString + "/src/main/cpp/frovedis/dataframe/*"),
+        Glob(baseDirectory.value.toString + "/src/main/cpp/frovedis/text/*"),
+        Glob(baseDirectory.value.toString + "/src/main/cpp/Makefile")
+      )
+    )
     .map(_._1.toFile)
 
 cycloneVeLibrary := {
@@ -453,16 +455,25 @@ cycloneVeLibrary := {
     in.find(_.toString.contains("Makefile")) match {
       case Some(makefile) =>
         Process(command = Seq("make"), cwd = makefile.getParentFile) ! logger
-        val managedResourcesDir = (Compile / resourcesManaged).value
-
-        in.filter(_.toString.contains("hpp"))
-        managedResourcesDir
-        Set(new File(makefile.getParentFile, "cyclone.so"))
+        val cycloneVeLibraryDir = (Compile / resourceManaged).value / "cyclone-ve"
+        val filesToCopy = {
+          in.filter(_.toString.endsWith(".hpp")) + (new File(makefile.getParentFile, "cyclone.so"))
+        }
+        IO.assertDirectory(cycloneVeLibraryDir)
+        filesToCopy.flatMap { sourceFile =>
+          Path
+            .rebase(makefile.getParentFile, cycloneVeLibraryDir)
+            .apply(sourceFile)
+            .map { targetFile =>
+              IO.copyFile(sourceFile, targetFile)
+              targetFile
+            }
+        }
       case None =>
         sys.error("Could not find a Makefile")
     }
   }
-  cachedFun(cycloneVeLibrarySources.value.toSet).head
+  cachedFun(cycloneVeLibrarySources.value.toSet)
 }
 
 cycloneVeLibrary / logBuffered := false
