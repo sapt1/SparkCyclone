@@ -22,21 +22,20 @@
 #include <string.h>
 #include <stdint.h>
 #include <math.h>
+#include <string>
 #include <limits>
 #include <iostream>
 #include <vector>
 #include <chrono>
 #include <ctime>
 #include <algorithm>
-#include "dict.hpp"
-#include "words.hpp"
-#include "words.cc"
-#include "char_int_conv.hpp"
-#include "char_int_conv.cc"
-#include "parsefloat.hpp"
-#include "parsefloat.cc"
-#include "parsedatetime.hpp"
-#include "datetime_utility.hpp"
+#include "cyclone.hpp"
+#include "transfer-definitions.hpp"
+#include "frovedis/text/words.hpp"
+#include "frovedis/text/char_int_conv.hpp"
+#include "frovedis/text/parsefloat.hpp"
+#include "frovedis/text/parsedatetime.hpp"
+#include "frovedis/text/datetime_utility.hpp"
 
 static std::string utcnanotime() {
     auto now = std::chrono::system_clock::now();

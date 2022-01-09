@@ -28,17 +28,12 @@
 #include <chrono>
 #include <ctime>
 #include <algorithm>
-#include "dict.cc"
-#include "dict.hpp"
-#include "words.hpp"
-#include "words.cc"
-#include "char_int_conv.hpp"
-#include "char_int_conv.cc"
-#include "parsefloat.hpp"
-#include "parsefloat.cc"
-#include "parsedatetime.hpp"
-#include "parsedatetime.cc"
-#include "datetime_utility.hpp"
+#include "frovedis/text/dict.hpp"
+#include "frovedis/text/words.hpp"
+#include "frovedis/text/char_int_conv.hpp"
+#include "frovedis/text/parsefloat.hpp"
+#include "frovedis/text/parsedatetime.hpp"
+#include "frovedis/text/datetime_utility.hpp"
 
 #ifndef VE_TD_DEFS
 typedef struct
