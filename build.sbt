@@ -2,7 +2,7 @@ import sbt.Def.spaceDelimited
 import sbt.Keys.envVars
 
 import java.lang.management.ManagementFactory
-import java.nio.file.Files
+import java.nio.file.{Files, Paths}
 
 val CMake = config("cmake") extend Test
 val TPC = config("tpc") extend Test
@@ -422,44 +422,37 @@ lazy val `tpcbench-run` = project
     reStart / envVars += "CYCLONE_JAR" -> (root / assembly).value.absolutePath,
     reStart := reStart
       .dependsOn((Test / testQuick).toTask(""))
-      .dependsOn((root / Test / compile))
+      .dependsOn(root / Test / compile)
       .dependsOn((root / VectorEngine / compile))
       .evaluated,
     Test / fork := true
   )
   .dependsOn(tracing)
 
-lazy val buildHostLibrary = settingKey[Boolean]("Build host library")
 lazy val buildVeLibrary = settingKey[Boolean]("Build VE library")
 
-buildVeLibrary := CMakeBuilder.hasNcc
-buildHostLibrary := true
+buildVeLibrary := Files.exists(Paths.get("/opt/nec/ve/bin/ncc"))
 
 Compile / resourceGenerators += Def.taskDyn {
   if (buildVeLibrary.value) cycloneVeLibrary.toTask
   else Def.task(Seq.empty[File])
 }.taskValue
 
-Compile / resourceGenerators += Def.taskDyn {
-  if (buildHostLibrary.value) cycloneHostLibrary.toTask
-  else Def.task(Seq.empty[File])
-}.taskValue
-
 lazy val cycloneVeLibrary = taskKey[Seq[File]]("Cyclone VE library")
-lazy val cycloneHostLibrary = taskKey[Seq[File]]("Cyclone native library")
 lazy val cycloneVeLibrarySources = taskKey[Seq[File]]("Cyclone VE library sources")
 
 cycloneVeLibrarySources :=
   sbt.nio.file.FileTreeView.default
     .list(
       Seq(
-        Glob(baseDirectory.value.toString + "/src/main/cpp/*.hpp"),
-        Glob(baseDirectory.value.toString + "/src/main/cpp/*.cc"),
-        Glob(baseDirectory.value.toString + "/src/main/cpp/frovedis/core/*"),
-        Glob(baseDirectory.value.toString + "/src/main/cpp/frovedis/dataframe/*"),
-        Glob(baseDirectory.value.toString + "/src/main/cpp/frovedis/text/*"),
-        Glob(baseDirectory.value.toString + "/src/main/cpp/Makefile"),
-        Glob(baseDirectory.value.toString + "/src/main/cpp/CMakeLists.txt")
+        Glob((Compile / resourceDirectory).value.toString + "/com/nec/cyclone/cpp/*.hpp"),
+        Glob((Compile / resourceDirectory).value.toString + "/com/nec/cyclone/cpp/*.cc"),
+        Glob((Compile / resourceDirectory).value.toString + "/com/nec/cyclone/cpp/frovedis/core/*"),
+        Glob(
+          (Compile / resourceDirectory).value.toString + "/com/nec/cyclone/cpp/frovedis/dataframe/*"
+        ),
+        Glob((Compile / resourceDirectory).value.toString + "/com/nec/cyclone/cpp/frovedis/text/*"),
+        Glob((Compile / resourceDirectory).value.toString + "/com/nec/cyclone/cpp/Makefile")
       )
     )
     .map(_._1.toFile)
@@ -495,57 +488,4 @@ cycloneVeLibrary := {
   cachedFun(cycloneVeLibrarySources.value.toSet).toList.sortBy(_.toString.contains(".so"))
 }
 
-cycloneHostLibrary := {
-  val s = streams.value
-  val builder = CMakeBuilder.Builder.default
-  val cachedFun = FileFunction.cached(s.cacheDirectory / "cpp") { (in: Set[File]) =>
-    val logger = s.log
-    import scala.sys.process._
-    val cMakeBuildDirHost = (target.value / s"host-${builder.label}-cmake")
-    IO.createDirectory(cMakeBuildDirHost)
-    in.find(_.toString.contains("CMakeLists.txt")) match {
-      case Some(cmakeLists) =>
-        val rb = Path.rebase(cmakeLists.getParentFile, cMakeBuildDirHost)
-        val copies = IO.copy(in.toList.flatMap { from =>
-          rb.apply(from)
-            .map(to => from -> to)
-        })
-        val copiedCMakeLists = rb.apply(cmakeLists).get
-        Process(
-          command = builder.prepare(copiedCMakeLists.toPath),
-          cwd = copiedCMakeLists.getParentFile
-        ) ! logger
-        Process(
-          command = builder.buildLibrary(copiedCMakeLists.toPath),
-          cwd = copiedCMakeLists.getParentFile
-        ) ! logger
-        val cycloneVeLibraryDir = (Compile / resourceManaged).value / "cyclonehost"
-        IO.assertAbsolute(builder.resolveNative(copiedCMakeLists.toPath).toFile.getAbsoluteFile)
-        val filesToCopy = {
-          copies.filter(fs =>
-            fs.toString.endsWith(".hpp") || fs.toString.endsWith(".incl")
-          ) + builder
-            .resolveNative(copiedCMakeLists.toPath)
-            .toFile
-        }
-        IO.createDirectory(cycloneVeLibraryDir)
-        filesToCopy.flatMap { sourceFile =>
-          Path
-            .rebase(copiedCMakeLists.getParentFile, cycloneVeLibraryDir)
-            .apply(sourceFile)
-            .map { targetFile =>
-              IO.copyFile(sourceFile, targetFile)
-              targetFile
-            }
-        }
-      case None =>
-        sys.error(s"Could not find a Makefile; files are ${in}")
-    }
-  }
-
-  cachedFun(cycloneVeLibrarySources.value.toSet).toSeq.sortBy(_.toString.contains(builder.ext))
-}
-
 cycloneVeLibrary / logBuffered := false
-
-cycloneHostLibrary / logBuffered := false
