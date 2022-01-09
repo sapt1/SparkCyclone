@@ -96,8 +96,8 @@ object StringHole {
           s"std::vector<int> $myId($refName->count);",
           s"frovedis::words $myIdWords = varchar_vector_to_words($refName);",
           s"std::vector<size_t> $matchingIds = frovedis::like($myIdWords.chars," +
-            s"(const vector<size_t>&)($myIdWords.starts),",
-          s"(const vector<size_t>&)($myIdWords.lens),",
+            s"(const std::vector<size_t>&)($myIdWords.starts),",
+          s"(const std::vector<size_t>&)($myIdWords.lens),",
           s""""$likeString");""",
           CodeLines.debugHere,
           s"for ( int i = 0; i < $refName->count; i++) { ",
