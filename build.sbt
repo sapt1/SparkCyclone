@@ -427,10 +427,26 @@ lazy val `tpcbench-run` = project
   )
   .dependsOn(tracing)
 
-Compile / resourceGenerators += cycloneVeLibrary.taskValue.map(_.toSeq)
+lazy val buildHostLibrary = settingKey[Boolean]("Build host library")
+lazy val buildVeLibrary = settingKey[Boolean]("Build VE library")
 
-lazy val cycloneVeLibrary = taskKey[Set[File]]("Cyclone VE library file (.so)")
+buildVeLibrary := CMakeBuilder.hasNcc
+buildHostLibrary := !CMakeBuilder.isWin
 
+Compile / resourceGenerators += Def.taskDyn {
+  val default = cycloneVeLibrary.taskValue.map(_.toSeq)
+  if (buildVeLibrary.value) Def.task(default.value)
+  else Def.task(Seq.empty[File])
+}
+
+Compile / resourceGenerators += Def.taskDyn {
+  val default = cycloneHostLibrary.taskValue.map(_.toSeq)
+  if (buildHostLibrary.value) Def.task(default.value)
+  else Def.task(Seq.empty[File])
+}
+
+lazy val cycloneVeLibrary = taskKey[Set[File]]("Cyclone VE library")
+lazy val cycloneHostLibrary = taskKey[Set[File]]("Cyclone native library")
 lazy val cycloneVeLibrarySources = taskKey[Seq[File]]("Cyclone VE library sources")
 
 cycloneVeLibrarySources :=
@@ -442,7 +458,8 @@ cycloneVeLibrarySources :=
         Glob(baseDirectory.value.toString + "/src/main/cpp/frovedis/core/*"),
         Glob(baseDirectory.value.toString + "/src/main/cpp/frovedis/dataframe/*"),
         Glob(baseDirectory.value.toString + "/src/main/cpp/frovedis/text/*"),
-        Glob(baseDirectory.value.toString + "/src/main/cpp/Makefile")
+        Glob(baseDirectory.value.toString + "/src/main/cpp/Makefile"),
+        Glob(baseDirectory.value.toString + "/src/main/cpp/CMakeLists.txt")
       )
     )
     .map(_._1.toFile)
@@ -454,10 +471,13 @@ cycloneVeLibrary := {
     import scala.sys.process._
     in.find(_.toString.contains("Makefile")) match {
       case Some(makefile) =>
-        Process(command = Seq("make", "clean", "cyclone.so"), cwd = makefile.getParentFile) ! logger
+        Process(command = Seq("make", "cyclone-ve.so"), cwd = makefile.getParentFile) ! logger
         val cycloneVeLibraryDir = (Compile / resourceManaged).value / "cyclone-ve"
         val filesToCopy = {
-          in.filter(_.toString.endsWith(".hpp")) + (new File(makefile.getParentFile, "cyclone.so"))
+          in.filter(_.toString.endsWith(".hpp")) + (new File(
+            makefile.getParentFile,
+            "cyclone-ve.so"
+          ))
         }
         IO.createDirectory(cycloneVeLibraryDir)
         filesToCopy.flatMap { sourceFile =>
@@ -473,6 +493,55 @@ cycloneVeLibrary := {
         sys.error("Could not find a Makefile")
     }
   }
+  cachedFun(cycloneVeLibrarySources.value.toSet)
+}
+
+cycloneHostLibrary := {
+  val s = streams.value
+  val cachedFun = FileFunction.cached(s.cacheDirectory / "cpp") { (in: Set[File]) =>
+    val logger = s.log
+    import scala.sys.process._
+    val cMakeBuildDirHost = (target.value / "host-cmake")
+    IO.createDirectory(cMakeBuildDirHost)
+    in.find(_.toString.contains("CMakeLists.txt")) match {
+      case Some(cmakeLists) =>
+        val rb = Path.rebase(cmakeLists.getParentFile, cMakeBuildDirHost)
+        val copies = IO.copy(in.toList.flatMap { from =>
+          rb.apply(from)
+            .map(to => from -> to)
+        })
+        val copiedCMakeLists = rb.apply(cmakeLists).get
+        val builder = CMakeBuilder.Builder.default
+        Process(
+          command = builder.prepare(copiedCMakeLists.toPath),
+          cwd = copiedCMakeLists.getParentFile
+        ) ! logger
+        Process(
+          command = builder.buildLibrary(copiedCMakeLists.toPath),
+          cwd = copiedCMakeLists.getParentFile
+        ) ! logger
+        val cycloneVeLibraryDir = (Compile / resourceManaged).value / "cyclone-host"
+        IO.assertAbsolute(builder.resolveNative(copiedCMakeLists.toPath).toFile.getAbsoluteFile)
+        val filesToCopy = {
+          copies.filter(_.toString.endsWith(".hpp")) + builder
+            .resolveNative(copiedCMakeLists.toPath)
+            .toFile
+        }
+        IO.createDirectory(cycloneVeLibraryDir)
+        filesToCopy.flatMap { sourceFile =>
+          Path
+            .rebase(copiedCMakeLists.getParentFile, cycloneVeLibraryDir)
+            .apply(sourceFile)
+            .map { targetFile =>
+              IO.copyFile(sourceFile, targetFile)
+              targetFile
+            }
+        }
+      case None =>
+        sys.error(s"Could not find a Makefile; files are ${in}")
+    }
+  }
+
   cachedFun(cycloneVeLibrarySources.value.toSet)
 }
 

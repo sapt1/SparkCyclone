@@ -54,8 +54,8 @@ SOURCES = cyclone.cc \
 	frovedis/text/parsefloat.cc \
 	frovedis/text/words.cc \
 	
-cyclone.so: $(DEPS)
-	$(NCC) $(NCC_OPTS) -shared -fpic -pthread -o cyclone.so $(SOURCES)
+cyclone-ve.so: $(DEPS)
+	$(NCC) $(NCC_OPTS) -shared -fpic -pthread -o cyclone-ve.so $(SOURCES)
 
 clean:
-	rm -f cyclone.so
+	rm -f cyclone-ve.so
