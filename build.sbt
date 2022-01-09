@@ -427,7 +427,29 @@ lazy val `tpcbench-run` = project
   )
   .dependsOn(tracing)
 
-Compile / resourceGenerators += Def.task {
+Compile / resourceGenerators += cycloneVeLibrary.taskValue.map(f => Seq(f))
 
-  makeSomeResources((Compile / resourceManaged).value / "demo")
-}.taskValue
+lazy val cycloneVeLibrary = taskKey[File]("Cyclone VE library file (.so)")
+
+lazy val cycloneVeLibrarySources = taskKey[Seq[File]]("Cyclone VE library sources")
+
+cycloneVeLibrarySources :=
+  sbt.nio.file.FileTreeView.default
+    .list(Glob(baseDirectory.value + "src/main/cpp/**"))
+    .map(_._1.toFile)
+
+cycloneVeLibrary := {
+  val s = streams.value
+  val cachedFun = FileFunction.cached(s.cacheDirectory / "cpp") { (in: Set[File]) =>
+    val logger = s.log
+    import scala.sys.process._
+    in.find(_.toString.contains("Makefile")) match {
+      case Some(makefile) =>
+        Process(command = Seq("make"), cwd = makefile.getParentFile) ! logger
+        Set(new File(makefile.getParentFile, "cyclone.so"))
+      case None =>
+        sys.error("Could not find a Makefile")
+    }
+  }
+  cachedFun(cycloneVeLibrarySources.value.toSet).head
+}
