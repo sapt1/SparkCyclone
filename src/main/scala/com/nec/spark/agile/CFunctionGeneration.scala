@@ -21,9 +21,18 @@ package com.nec.spark.agile
 
 import com.nec.cmake.TcpDebug
 import com.nec.spark.agile.CExpressionEvaluation.CodeLines
-import com.nec.spark.agile.CFunctionGeneration.VeScalarType.{VeNullableDouble, VeNullableFloat, VeNullableInt, VeNullableLong}
+import com.nec.spark.agile.CFunctionGeneration.VeScalarType.{
+  VeNullableDouble,
+  VeNullableFloat,
+  VeNullableInt,
+  VeNullableLong
+}
 import com.nec.spark.agile.StringHole.StringHoleEvaluation
-import com.nec.spark.agile.StringProducer.{FrovedisCopyStringProducer, FrovedisStringProducer, ImperativeStringProducer}
+import com.nec.spark.agile.StringProducer.{
+  FrovedisCopyStringProducer,
+  FrovedisStringProducer,
+  ImperativeStringProducer
+}
 import com.nec.spark.agile.groupby.GroupByOutline
 import org.apache.arrow.memory.BufferAllocator
 import org.apache.arrow.vector._
@@ -452,7 +461,11 @@ object CFunctionGeneration {
       TcpDebug.conditional.headers,
       toCodeLinesNoHeaderOutPtr2(functionName)
     )
+
     def toCodeLinesS(functionName: String): CodeLines = CodeLines.from(
+      """#include "transfer-definitions.hpp"""",
+      """#include "cyclone.hpp"""",
+      """#include "cyclone.cc"""",
       "#include <cmath>",
       "#include <bitset>",
       "#include <string>",
@@ -471,6 +484,9 @@ object CFunctionGeneration {
 
     def toCodeLinesPF(functionName: String): CodeLines = {
       CodeLines.from(
+        """#include "transfer-definitions.hpp"""",
+        """#include "cyclone.hpp"""",
+        """#include "cyclone.cc"""",
         "#include <cmath>",
         "#include <bitset>",
         "#include <string>",
@@ -479,6 +495,7 @@ object CFunctionGeneration {
         toCodeLinesNoHeader(functionName)
       )
     }
+
     def toCodeLinesG(functionName: String): CodeLines = {
       CodeLines.from(
         "#include <cmath>",
