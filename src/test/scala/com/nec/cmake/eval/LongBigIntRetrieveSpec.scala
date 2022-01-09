@@ -36,7 +36,6 @@ final class LongBigIntRetrieveSpec extends AnyFreeSpec {
         List(
           """#include "transfer-definitions.hpp"""",
           """#include "cyclone.hpp"""",
-          """#include "cyclone.cc"""",
           "\n\n",
           CodeLines
             .from(

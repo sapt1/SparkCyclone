@@ -166,8 +166,6 @@ def veFilter(name: String): Boolean = name.startsWith("com.nec.ve")
 VectorEngine / fork := true
 VectorEngine / run / fork := false
 
-Test / fork := true
-
 /** This generates a file 'java.hprof.txt' in the project root for very simple profiling. * */
 VectorEngine / run / javaOptions ++= {
   // The feature was removed in JDK9, however for Spark we must support JDK8

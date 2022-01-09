@@ -26,7 +26,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import scala.sys.process._
-import com.nec.cmake.CMakeBuilder.Builder
+import com.nec.cmake.CMakeBuilder.{Builder, IncludeFile}
 import com.nec.spark.agile.CppResource.CppResources
 import com.typesafe.scalalogging.LazyLogging
 import javassist.compiler.CompileError
@@ -41,6 +41,25 @@ final case class CMakeBuilder(targetDir: Path, debug: Boolean) {
     val SourcesDir = targetDir.resolve("sources")
     CppResources.All.copyTo(SourcesDir)
     val maybeDebug = if (debug) "add_definitions(-DDEBUG)" else ""
+    val ccsToMatch: List[String] = cSource
+      .split("\n")
+      .collect { case IncludeFile(incl) =>
+        incl.replaceAllLiterally(".hpp", ".cc")
+      }
+      .toList
+
+    /** Only include resources that are actually needed here */
+    import scala.collection.JavaConverters._
+    val otherSources: List[String] =
+//      if (Builder.isWindows)
+      CppResources.All.all
+        .map(_.name)
+        .filter(_.endsWith(".cc"))
+        .map(_.replaceAllLiterally("\\", "/"))
+        .map("sources/" + _)
+        .toList
+//      else Nil
+
     lazy val CMakeListsTXT =
       s"""
 cmake_minimum_required(VERSION 3.6)
@@ -56,7 +75,7 @@ ${CppResources.All.all
         )
         .mkString("\n")}
 
-add_library(sparkcyclone SHARED sparkcyclone.cpp)
+add_library(sparkcyclone SHARED sparkcyclone.cpp ${otherSources.mkString(" ")})
 if(WIN32)
   target_link_libraries(sparkcyclone wsock32 ws2_32)
 endif()
@@ -78,6 +97,15 @@ endif()
 
 object CMakeBuilder extends LazyLogging {
 
+  object IncludeFile {
+    private val startPart = "#include \""
+    def unapply(str: String): Option[String] = {
+      if (str.startsWith(startPart))
+        Option(str.drop(startPart.length)).map(_.takeWhile(_ != '"'))
+      else None
+    }
+  }
+
   def buildC(cSource: String, debug: Boolean = false): Path = {
     val targetDir = Paths.get("target", s"c", s"${Instant.now().toEpochMilli}").toAbsolutePath
     if (Files.exists(targetDir)) {
@@ -95,12 +123,18 @@ object CMakeBuilder extends LazyLogging {
       buildC(cSource, debug)
     } catch {
       case e: Exception =>
-        logger.debug(s"Could not compile code due to error: ${e}", e)
-        e.toString
+        val specificErrors = e.toString
           .split("\r?\n")
-          .find(_.contains(": error "))
-          .foreach(errLine => logger.error(errLine))
-        throw new CompileError("Could not compile code. Reported in the log.")
+          .find(l => l.contains(" error "))
+          .toList
+
+        if (specificErrors.nonEmpty) {
+          specificErrors.foreach(errLine => logger.error(errLine))
+          throw new CompileError("Could not compile code. Reported in the log.")
+        } else {
+          logger.debug(s"Could not compile code due to error: ${e}", e)
+          throw e
+        }
     }
   }
 
@@ -116,8 +150,9 @@ object CMakeBuilder extends LazyLogging {
   }
 
   object Builder {
+    def isWindows: Boolean = os.contains("win")
+    val os = System.getProperty("os.name").toLowerCase
     def default: Builder = {
-      val os = System.getProperty("os.name").toLowerCase
       os match {
         case _ if os.contains("win") => WindowsBuilder
         case _ if os.contains("lin") => LinuxBuilder
@@ -182,7 +217,22 @@ object CMakeBuilder extends LazyLogging {
         }
       )
       val proc = process.run(io)
-      assert(proc.exitValue() == 0, s"Failed; data was: $res; process was ${process}; $resErr")
+      if (proc.exitValue() != 0)
+        throw RunFailure(res + "\n" + resErr)
+    }
+  }
+
+  object RunFailure {
+    def apply(fullLog: String): Throwable = {
+      val noWarns =
+        fullLog.split("\n").filterNot(_.contains("warning "))
+
+      val errors = fullLog.split("\n").filter(_.contains("error "))
+
+      new RuntimeException({
+        if (errors.nonEmpty) { "Errors: " :: errors.toList }
+        else { "Others: " :: noWarns.toList }
+      }.mkString("\n"))
     }
   }
 
