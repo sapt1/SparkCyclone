@@ -1067,7 +1067,7 @@ object RealExpressionEvaluationSpec extends LazyLogging {
       ).toCodeLinesPF(functionName)
 
     val cLib = CMakeBuilder.buildCLogging(
-      List(TransferDefinitionsSourceCode, "\n\n", generatedSource.cCode)
+      List(generatedSource.cCode)
         .mkString("\n\n")
     )
 

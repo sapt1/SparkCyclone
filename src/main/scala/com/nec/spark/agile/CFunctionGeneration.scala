@@ -461,7 +461,11 @@ object CFunctionGeneration {
       TcpDebug.conditional.headers,
       toCodeLinesNoHeaderOutPtr2(functionName)
     )
+
     def toCodeLinesS(functionName: String): CodeLines = CodeLines.from(
+      """#include "transfer-definitions.hpp"""",
+      """#include "cyclone.hpp"""",
+      """#include "cyclone.cc"""",
       "#include <cmath>",
       "#include <bitset>",
       "#include <string>",
@@ -480,6 +484,9 @@ object CFunctionGeneration {
 
     def toCodeLinesPF(functionName: String): CodeLines = {
       CodeLines.from(
+        """#include "transfer-definitions.hpp"""",
+        """#include "cyclone.hpp"""",
+        """#include "cyclone.cc"""",
         "#include <cmath>",
         "#include <bitset>",
         "#include <string>",
@@ -488,6 +495,7 @@ object CFunctionGeneration {
         toCodeLinesNoHeader(functionName)
       )
     }
+
     def toCodeLinesG(functionName: String): CodeLines = {
       CodeLines.from(
         "#include <cmath>",

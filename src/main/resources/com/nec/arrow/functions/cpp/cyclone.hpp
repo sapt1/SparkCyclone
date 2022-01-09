@@ -28,78 +28,22 @@
 #include <chrono>
 #include <ctime>
 #include <algorithm>
-#include "dict.cc"
 #include "dict.hpp"
 #include "words.hpp"
-#include "words.cc"
 #include "char_int_conv.hpp"
-#include "char_int_conv.cc"
 #include "parsefloat.hpp"
-#include "parsefloat.cc"
 #include "parsedatetime.hpp"
-#include "parsedatetime.cc"
 #include "datetime_utility.hpp"
 
-#ifndef VE_TD_DEFS
-typedef struct
-{
-    void **data;
-    size_t count;
-    size_t size;
-} data_out;
-
-typedef struct
-{
-    char *data;
-    int32_t *offsets;
-    int32_t count;
-} varchar_vector;
-
-typedef struct
-{
-    int32_t *data;
-    uint64_t *validityBuffer;
-    int32_t count;
-} nullable_int_vector;
-
-typedef struct
-{
-    double *data;
-    uint64_t *validityBuffer;
-    int32_t count;
-} nullable_double_vector;
-
-typedef struct
-{
-    int64_t *data;
-    uint64_t *validityBuffer;
-    int32_t count;
-} nullable_bigint_vector;
-
-
-typedef struct
-{
-    char *data;
-    int32_t *offsets;
-    int32_t dataSize;
-    int32_t count;
-} non_null_varchar_vector;
-
-typedef struct
-{
-    char *data;
-    int32_t *offsets;
-    uint64_t *validityBuffer;
-    int32_t dataSize;
-    int32_t count;
-} nullable_varchar_vector;
-
-typedef struct
-{
-    char *data;
-    int32_t length;
-} non_null_c_bounded_string;
-
-#define VE_TD_DEFS 1
-#endif
-
+static std::string utcnanotime();
+inline void log(std::string msg);
+inline void set_validity(uint64_t *validityBuffer, int32_t idx, int32_t validity);
+inline uint64_t check_valid(uint64_t *validityBuffer, int32_t idx);
+frovedis::words data_offsets_to_words(const char *data, const int32_t *offsets, const int32_t size, const int32_t count);
+frovedis::words varchar_vector_to_words(const non_null_varchar_vector *v);
+frovedis::words varchar_vector_to_words(const nullable_varchar_vector *v);
+void words_to_varchar_vector(frovedis::words& in, nullable_varchar_vector *out);
+void debug_words(frovedis::words &in);
+std::vector<size_t> idx_to_std(nullable_int_vector *idx);
+void print_indices(std::vector<size_t> vec);
+frovedis::words filter_words(frovedis::words &in_words, std::vector<size_t> to_select);
