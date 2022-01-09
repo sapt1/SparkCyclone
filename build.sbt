@@ -434,19 +434,19 @@ buildVeLibrary := CMakeBuilder.hasNcc
 buildHostLibrary := !CMakeBuilder.isWin
 
 Compile / resourceGenerators += Def.taskDyn {
-  val default = cycloneVeLibrary.taskValue.map(_.toSeq)
+  val default = cycloneVeLibrary.taskValue
   if (buildVeLibrary.value) Def.task(default.value)
   else Def.task(Seq.empty[File])
 }
 
 Compile / resourceGenerators += Def.taskDyn {
-  val default = cycloneHostLibrary.taskValue.map(_.toSeq)
+  val default = cycloneHostLibrary.taskValue
   if (buildHostLibrary.value) Def.task(default.value)
   else Def.task(Seq.empty[File])
 }
 
-lazy val cycloneVeLibrary = taskKey[Set[File]]("Cyclone VE library")
-lazy val cycloneHostLibrary = taskKey[Set[File]]("Cyclone native library")
+lazy val cycloneVeLibrary = taskKey[Seq[File]]("Cyclone VE library")
+lazy val cycloneHostLibrary = taskKey[Seq[File]]("Cyclone native library")
 lazy val cycloneVeLibrarySources = taskKey[Seq[File]]("Cyclone VE library sources")
 
 cycloneVeLibrarySources :=
@@ -493,15 +493,16 @@ cycloneVeLibrary := {
         sys.error("Could not find a Makefile")
     }
   }
-  cachedFun(cycloneVeLibrarySources.value.toSet)
+  cachedFun(cycloneVeLibrarySources.value.toSet).toList.sortBy(_.toString.contains(".so"))
 }
 
 cycloneHostLibrary := {
   val s = streams.value
+  val builder = CMakeBuilder.Builder.default
   val cachedFun = FileFunction.cached(s.cacheDirectory / "cpp") { (in: Set[File]) =>
     val logger = s.log
     import scala.sys.process._
-    val cMakeBuildDirHost = (target.value / "host-cmake")
+    val cMakeBuildDirHost = (target.value / s"host-${builder.label}-cmake")
     IO.createDirectory(cMakeBuildDirHost)
     in.find(_.toString.contains("CMakeLists.txt")) match {
       case Some(cmakeLists) =>
@@ -511,7 +512,6 @@ cycloneHostLibrary := {
             .map(to => from -> to)
         })
         val copiedCMakeLists = rb.apply(cmakeLists).get
-        val builder = CMakeBuilder.Builder.default
         Process(
           command = builder.prepare(copiedCMakeLists.toPath),
           cwd = copiedCMakeLists.getParentFile
@@ -542,7 +542,7 @@ cycloneHostLibrary := {
     }
   }
 
-  cachedFun(cycloneVeLibrarySources.value.toSet)
+  cachedFun(cycloneVeLibrarySources.value.toSet).toSeq.sortBy(_.toString.contains(builder.ext))
 }
 
 cycloneVeLibrary / logBuffered := false

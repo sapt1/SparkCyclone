@@ -7,6 +7,10 @@ object CMakeBuilder {
   val hasNcc = Files.exists(nccPath)
 
   sealed trait Builder {
+    def ext: String
+
+    def label: String
+
     def prepare(targetPath: Path): List[String]
 
     def buildLibrary(targetPath: Path): List[String]
@@ -35,6 +39,10 @@ object CMakeBuilder {
 
       override def resolveNative(targetPath: Path): Path =
         targetPath.getParent.resolve("Debug").resolve(s"${libN}.dll")
+
+      override def label: String = "windows"
+
+      override def ext: String = ".dll"
     }
 
     object LinuxBuilder extends Builder {
@@ -45,6 +53,10 @@ object CMakeBuilder {
 
       override def resolveNative(targetPath: Path): Path =
         targetPath.getParent.resolve(s"lib${libN}.so")
+
+      override def label: String = "linux"
+
+      override def ext: String = ".so"
     }
 
     object MacOSBuilder extends Builder {
@@ -55,6 +67,10 @@ object CMakeBuilder {
 
       override def resolveNative(targetPath: Path): Path =
         targetPath.getParent.resolve(s"lib${libN}.dylib")
+
+      override def label: String = "macos"
+
+      override def ext: String = ".dylib"
     }
   }
 
