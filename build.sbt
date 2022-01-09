@@ -454,12 +454,12 @@ cycloneVeLibrary := {
     import scala.sys.process._
     in.find(_.toString.contains("Makefile")) match {
       case Some(makefile) =>
-        Process(command = Seq("make"), cwd = makefile.getParentFile) ! logger
+        Process(command = Seq("make", "clean", "cyclone.so"), cwd = makefile.getParentFile) ! logger
         val cycloneVeLibraryDir = (Compile / resourceManaged).value / "cyclone-ve"
         val filesToCopy = {
           in.filter(_.toString.endsWith(".hpp")) + (new File(makefile.getParentFile, "cyclone.so"))
         }
-        IO.assertDirectory(cycloneVeLibraryDir)
+        IO.createDirectory(cycloneVeLibraryDir)
         filesToCopy.flatMap { sourceFile =>
           Path
             .rebase(makefile.getParentFile, cycloneVeLibraryDir)
