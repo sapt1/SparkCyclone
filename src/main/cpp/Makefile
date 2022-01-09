@@ -2,7 +2,7 @@ NCC = /opt/nec/ve/bin/ncc
 NCC_OPTS = -xc++
 ALL = cyclone.so
 all: $(ALL)
-cyclone.o: cyclone.cc \
+DEPS = cyclone.cc \
 	cyclone.hpp \
 	frovedis/core/conditions_for_find.hpp \
 	frovedis/core/config.hpp \
@@ -26,7 +26,6 @@ cyclone.o: cyclone.cc \
 	frovedis/text/dict.hpp \
 	frovedis/text/find.cc \
 	frovedis/text/find.hpp \
-	frovedis/text/find_condition.hpp \
 	frovedis/text/float_to_words.cc \
 	frovedis/text/float_to_words.hpp \
 	frovedis/text/int_to_words.cc \
@@ -41,10 +40,22 @@ cyclone.o: cyclone.cc \
 	transfer-definitions.hpp \
 	tuple_hash.hpp \
 	utility.hpp
-	$(NCC) $(NCC_OPTS) -o $@ $^
 
-cyclone.so: cyclone.o \
-	$(NCC) -shared -pthread -o cyclone.so cyclone.o
+SOURCES = cyclone.cc \
+	frovedis/core/utility.cc \
+	frovedis/dataframe/join.cc \
+	frovedis/text/char_int_conv.cc \
+	frovedis/text/datetime_to_words.cc \
+	frovedis/text/dict.cc \
+	frovedis/text/find.cc \
+	frovedis/text/float_to_words.cc \
+	frovedis/text/int_to_words.cc \
+	frovedis/text/parsedatetime.cc \
+	frovedis/text/parsefloat.cc \
+	frovedis/text/words.cc \
+	
+cyclone.so: $(DEPS)
+	$(NCC) $(NCC_OPTS) -shared -fpic -pthread -o cyclone.so $(SOURCES)
 
 clean:
 	rm -f cyclone.so

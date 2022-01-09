@@ -3,7 +3,6 @@
 #include <iostream>
 #include "words.hpp"
 #include "find.hpp"
-#include "find.cc"
 #include "../core/radix_sort.hpp"
 #include "../core/set_operations.hpp"
 #include "../core/lower_bound.hpp"
