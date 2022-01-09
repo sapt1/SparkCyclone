@@ -1,17 +1,18 @@
 package org.apache.spark.metrics.source
 
-import com.codahale.metrics.{Gauge, Histogram, MetricRegistry}
+import com.codahale.metrics.{Gauge, Histogram, MetricRegistry, UniformReservoir}
 import com.nec.ve.VeProcessMetrics
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
-final class ProcessExecutorMetrics() extends VeProcessMetrics with Source {
+final class ProcessExecutorMetrics extends VeProcessMetrics with Source {
   private val allocations: scala.collection.mutable.Map[Long, Long] = mutable.Map.empty
-  private val veCalls: ArrayBuffer[Long] =  new ArrayBuffer[Long]()
+  private val veCalls: ArrayBuffer[Long] = new ArrayBuffer[Long]()
   private var totalTransferTime: Long = 0L
-  private var totalSerializationTime: Long = 0L
+  private var arrowConversionTime: Long = 0L
+  private val arrowConversionHist = new Histogram(new UniformReservoir())
 
-   def measureRunningTime[T](toMeasure: => T)(registerTime: Long => Unit): T = {
+  def measureRunningTime[T](toMeasure: => T)(registerTime: Long => Unit): T = {
     val start = System.currentTimeMillis()
     val result = toMeasure
     val end = System.currentTimeMillis()
@@ -23,12 +24,13 @@ final class ProcessExecutorMetrics() extends VeProcessMetrics with Source {
   override def registerAllocation(amount: Long, position: Long): Unit =
     allocations.put(position, amount)
 
-  override def registerConversionTime(increaseBy: Long): Unit = {
-    totalSerializationTime += increaseBy
+  override def registerConversionTime(timeTaken: Long): Unit = {
+    arrowConversionTime += timeTaken
+    arrowConversionHist.update(timeTaken)
   }
 
-  override def registerTransferTime(increaseBy: Long): Unit = {
-    totalTransferTime += increaseBy
+  override def registerTransferTime(timeTaken: Long): Unit = {
+    totalTransferTime += timeTaken
   }
 
   override def deregisterAllocation(position: Long): Unit =
@@ -50,7 +52,7 @@ final class ProcessExecutorMetrics() extends VeProcessMetrics with Source {
   metricRegistry.register(
     MetricRegistry.name("ve", "arrowConversionTime"),
     new Gauge[Long] {
-      override def getValue: Long = totalSerializationTime
+      override def getValue: Long = arrowConversionTime
     }
   )
 
