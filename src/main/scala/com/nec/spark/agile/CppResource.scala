@@ -30,7 +30,7 @@ import java.nio.file.Path
 import java.util.regex.Pattern
 
 object CppResource {
-  val CppPrefix = "com.nec.arrow.functions"
+  val CppPrefix = "com.nec.cyclone.cpp"
   val CppPrefixPath: String = CppPrefix.replace('.', '/')
 
   final case class CppResources(all: Set[CppResource]) {
