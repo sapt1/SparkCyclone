@@ -546,3 +546,5 @@ cycloneHostLibrary := {
 }
 
 cycloneVeLibrary / logBuffered := false
+
+cycloneHostLibrary / logBuffered := false
