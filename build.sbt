@@ -427,15 +427,22 @@ lazy val `tpcbench-run` = project
   )
   .dependsOn(tracing)
 
-Compile / resourceGenerators += cycloneVeLibrary.taskValue.map(f => Seq(f))
+Compile / resourceGenerators += cycloneVeLibrary.taskValue
 
-lazy val cycloneVeLibrary = taskKey[File]("Cyclone VE library file (.so)")
+lazy val cycloneVeLibrary = taskKey[Seq[File]]("Cyclone VE library file (.so)")
 
 lazy val cycloneVeLibrarySources = taskKey[Seq[File]]("Cyclone VE library sources")
 
 cycloneVeLibrarySources :=
   sbt.nio.file.FileTreeView.default
-    .list(Glob(baseDirectory.value + "src/main/cpp/**"))
+    .list(Seq(
+      Glob(baseDirectory.value.toString + "/src/main/cpp/*.hpp"),
+      Glob(baseDirectory.value.toString + "/src/main/cpp/*.cc"),
+      Glob(baseDirectory.value.toString + "/src/main/cpp/frovedis/core/*"),
+      Glob(baseDirectory.value.toString + "/src/main/cpp/frovedis/dataframe/*"),
+      Glob(baseDirectory.value.toString + "/src/main/cpp/frovedis/text/*"),
+      Glob(baseDirectory.value.toString + "/src/main/cpp/Makefile"),
+    ))
     .map(_._1.toFile)
 
 cycloneVeLibrary := {
@@ -446,6 +453,10 @@ cycloneVeLibrary := {
     in.find(_.toString.contains("Makefile")) match {
       case Some(makefile) =>
         Process(command = Seq("make"), cwd = makefile.getParentFile) ! logger
+        val managedResourcesDir = (Compile / resourcesManaged).value
+
+        in.filter(_.toString.contains("hpp"))
+        managedResourcesDir
         Set(new File(makefile.getParentFile, "cyclone.so"))
       case None =>
         sys.error("Could not find a Makefile")
@@ -453,3 +464,5 @@ cycloneVeLibrary := {
   }
   cachedFun(cycloneVeLibrarySources.value.toSet).head
 }
+
+cycloneVeLibrary / logBuffered := false
