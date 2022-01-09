@@ -453,6 +453,7 @@ object CFunctionGeneration {
       "#include <cmath>",
       "#include <bitset>",
       "#include <string>",
+      "#include <vector>",
       "#include <iostream>",
       "#include <tuple>",
       "#include \"tuple_hash.hpp\"",

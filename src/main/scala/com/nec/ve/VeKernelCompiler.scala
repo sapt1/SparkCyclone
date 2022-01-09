@@ -210,7 +210,7 @@ final case class VeKernelCompiler(
           "-o",
           soFile.toString,
           oFile.toString
-        ) ++ linkSos.toList.map(_.name)
+        ) ++ linkSos.toList.map(_.name).map(sourcesDir.resolve(_)).map(_.toString)
       }
       ProcessRunner.runHopeOk(
         Process(command = command2, cwd = buildDir.toFile),
