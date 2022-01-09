@@ -187,6 +187,7 @@ final case class VeKernelCompiler(
       val command: Seq[String] =
         Seq(nccPath) ++ compilerArguments ++ includesArgs ++ Seq(
           "-xc++",
+          "-Isources/",
           "-c",
           cSource.toString,
           "-o",
