@@ -539,6 +539,21 @@ object CFunctionGeneration {
       )
     }
 
+    def toCodeLinesHeaderPtr(functionName: String): CodeLines =
+      CodeLines.from(
+        """#include "transfer-definitions.hpp"""",
+        """#include "cyclone.hpp"""",
+        "#include <cmath>",
+        "#include <bitset>",
+        "#include <string>",
+        "#include <iostream>",
+        "#include <tuple>",
+        "#include \"tuple_hash.hpp\"",
+        """#include "frovedis/dataframe/join.hpp"""",
+        """#include "frovedis/core/set_operations.hpp"""",
+        toCodeLinesNoHeaderOutPtr(functionName)
+      )
+
     def toCodeLinesNoHeaderOutPtr(functionName: String): CodeLines = {
       CodeLines.from(
         s"""extern "C" long $functionName(""", {
