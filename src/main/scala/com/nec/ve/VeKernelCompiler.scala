@@ -168,13 +168,15 @@ final case class VeKernelCompiler(
     val cSource = buildDir.resolve(s"${compilationPrefix}.c")
 
     val sourcesDir = buildDir.resolve("sources")
-    CppResources.All.copyTo(sourcesDir)
+    CppResources.AllVe.copyTo(sourcesDir)
     val includes: List[String] = {
-      CppResources.All.all
+      CppResources.AllVe.all
         .map(_.containingDir(sourcesDir))
         .toList
         .map(i => i.toUri.toString.drop(sourcesDir.getParent.toUri.toString.length))
     }
+    val linkSos =
+      CppResources.AllVe.all.filter(_.name.endsWith(".so"))
     Files.write(cSource, sourceCode.getBytes())
     try {
       val oFile = buildDir.resolve(s"${compilationPrefix}.o")
@@ -202,12 +204,13 @@ final case class VeKernelCompiler(
         doDebug = config.doDebug
       )
 
-      val command2 =
+      val command2: Seq[String] = {
         Seq(nccPath, "-shared", "-pthread" /*, "-ftrace", "-lveftrace_p"*/ ) ++ Seq(
           "-o",
           soFile.toString,
           oFile.toString
-        )
+        ) ++ linkSos.toList.map(_.name)
+      }
       ProcessRunner.runHopeOk(
         Process(command = command2, cwd = buildDir.toFile),
         doDebug = config.doDebug
