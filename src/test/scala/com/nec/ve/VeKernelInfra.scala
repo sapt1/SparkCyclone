@@ -1,6 +1,7 @@
 package com.nec.ve
 
-import com.nec.arrow.TransferDefinitions
+import com.nec.spark.agile.CFunction2
+import com.nec.spark.agile.CFunctionGeneration.CFunction
 import org.scalatest.Suite
 
 import java.nio.file.{Path, Paths}
@@ -8,8 +9,13 @@ import java.time.Instant
 
 trait VeKernelInfra { this: Suite =>
 
-  def compiledWithHeaders[T](cCode: String)(f: Path => T): T = {
-    withCompiled(s"${TransferDefinitions.TransferDefinitionsSourceCode}\n\n${cCode}\n")(f)
+  def compiledWithHeaders[T](cCode: CFunction, name: String)(f: Path => T): T = {
+    withCompiled(cCode.toCodeLinesG(name).cCode)(f)
+  }
+
+  def compiledWithHeaders[T](cCode: CFunction2, name: String)(f: Path => T): T = {
+//    withCompiled(cCode.toCodeLinesG(name).cCode)(f)
+    ???
   }
 
   def withCompiled[T](cCode: String)(f: Path => T): T = {
