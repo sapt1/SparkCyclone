@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include "words.hpp"
 #include "find.hpp"
 #include "find.cc"

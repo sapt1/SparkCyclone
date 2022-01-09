@@ -426,3 +426,8 @@ lazy val `tpcbench-run` = project
     Test / fork := true
   )
   .dependsOn(tracing)
+
+Compile / resourceGenerators += Def.task {
+
+  makeSomeResources((Compile / resourceManaged).value / "demo")
+}.taskValue
