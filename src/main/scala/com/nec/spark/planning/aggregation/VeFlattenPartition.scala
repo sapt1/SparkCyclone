@@ -2,7 +2,10 @@ package com.nec.spark.planning.aggregation
 
 import com.nec.spark.SparkCycloneExecutorPlugin.{source, veProcess}
 import com.nec.spark.planning.{PlanCallsVeFunction, SupportsVeColBatch, VeFunction}
-import com.nec.spark.SparkCycloneExecutorPlugin.metrics.{registerFunctionCallTime, measureRunningTime}
+import com.nec.spark.SparkCycloneExecutorPlugin.metrics.{
+  measureRunningTime,
+  registerFunctionCallTime
+}
 import com.nec.ve.VeColBatch
 import com.nec.ve.VeColBatch.VeBatchOfBatches
 import org.apache.spark.internal.Logging
@@ -37,13 +40,14 @@ case class VeFlattenPartition(flattenFunction: VeFunction, child: SparkPlan)
               case _ =>
                 Iterator {
                   VeColBatch.fromList(
-                    try mea
+                    try measureRunningTime(
                       veProcess.executeMultiIn(
-                      libraryReference = libRefExchange,
-                      functionName = flattenFunction.functionName,
-                      batches = VeBatchOfBatches.fromVeColBatches(inputBatches),
-                      results = flattenFunction.results
-                    )
+                        libraryReference = libRefExchange,
+                        functionName = flattenFunction.functionName,
+                        batches = VeBatchOfBatches.fromVeColBatches(inputBatches),
+                        results = flattenFunction.results
+                      )
+                    )(registerFunctionCallTime(_, veFunction.functionName))
                     finally {
                       logInfo("Transformed input.")
                       inputBatches

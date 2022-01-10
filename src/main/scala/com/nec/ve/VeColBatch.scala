@@ -18,7 +18,8 @@ import com.nec.spark.SparkCycloneExecutorPlugin
 import SparkCycloneExecutorPlugin.metrics.{
   measureRunningTime,
   registerDeserializationTime,
-  registerSerializationTime
+  registerSerializationTime,
+  registerTransferTime
 }
 import com.nec.spark.agile.CFunctionGeneration.{VeScalarType, VeString, VeType}
 import com.nec.spark.agile.SparkExpressionToCExpression.likelySparkType
@@ -201,13 +202,12 @@ object VeColBatch {
     def deserialize(
       ba: Array[Byte]
     )(implicit source: VeColVectorSource, veProcess: VeProcess): VeColVector =
-      registerDeserializationTime {
-        injectBuffers(newBuffers =
-          bufferSizes.scanLeft(0)(_ + _).zip(bufferSizes).map { case (bufferStart, bufferSize) =>
+      measureRunningTime(
+        injectBuffers(newBuffers = bufferSizes.scanLeft(0)(_ + _).zip(bufferSizes).map {
+          case (bufferStart, bufferSize) =>
             ba.slice(bufferStart, bufferStart + bufferSize)
-          }
-        ).newContainer()
-      }(registerDeserializationTime)
+        }).newContainer()
+      )(registerDeserializationTime)
 
     private def newContainer()(implicit
       veProcess: VeProcess,
