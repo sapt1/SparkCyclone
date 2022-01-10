@@ -54,6 +54,7 @@ final class ProcessExecutorMetrics extends VeProcessMetrics with Source {
       case None => {
         val hist = new Histogram(new UniformReservoir())
         metricRegistry.register(MetricRegistry.name("ve", s"veCallTimeHist_${functionName}"), hist)
+        perFunctionHistograms.put(functionName, hist)
         hist.update(timeTaken)
       }
     }
