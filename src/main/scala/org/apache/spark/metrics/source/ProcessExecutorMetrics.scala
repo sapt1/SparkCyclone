@@ -11,6 +11,10 @@ final class ProcessExecutorMetrics extends VeProcessMetrics with Source {
   private var totalTransferTime: Long = 0L
   private var arrowConversionTime: Long = 0L
   private val arrowConversionHist = new Histogram(new UniformReservoir())
+  private val serializationHist = new Histogram(new UniformReservoir())
+  private val deserializationHist = new Histogram(new UniformReservoir())
+  private val perFunctionHistograms: scala.collection.mutable.Map[String, Histogram] =
+    mutable.Map.empty
 
   def measureRunningTime[T](toMeasure: => T)(registerTime: Long => Unit): T = {
     val start = System.currentTimeMillis()
@@ -33,8 +37,27 @@ final class ProcessExecutorMetrics extends VeProcessMetrics with Source {
     totalTransferTime += timeTaken
   }
 
+  override def registerSerializationTime(timeTaken: Long): Unit = {
+    serializationHist.update(timeTaken)
+  }
+
+  override def registerDeserializationTime(timeTaken: Long): Unit = {
+    deserializationHist.update(timeTaken)
+  }
+
   override def deregisterAllocation(position: Long): Unit =
     allocations.remove(position)
+
+  override def registerFunctionCallTime(timeTaken: Long, functionName: String): Unit = {
+    perFunctionHistograms.get(functionName) match {
+      case Some(hist) => hist.update(timeTaken)
+      case None => {
+        val hist = new Histogram(new UniformReservoir())
+        metricRegistry.register(MetricRegistry.name("ve", s"veCallTimeHist_${functionName}"), hist)
+        hist.update(timeTaken)
+      }
+    }
+  }
 
   override def registerVeCall(timeTaken: Long): Unit = veCalls.append(timeTaken)
 

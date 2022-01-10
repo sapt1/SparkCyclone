@@ -21,6 +21,10 @@ package com.nec.spark.planning.plans
 
 import com.nec.cmake.{ScalaTcpDebug, Spanner}
 import com.nec.spark.SparkCycloneExecutorPlugin.{source, veProcess}
+import com.nec.spark.SparkCycloneExecutorPlugin.metrics.{
+  measureRunningTime,
+  registerFunctionCallTime
+}
 import com.nec.spark.planning.{PlanCallsVeFunction, SupportsVeColBatch, Tracer, VeFunction}
 import com.nec.ve.VeColBatch
 import com.nec.ve.VeKernelCompiler.VeCompilerConfig
@@ -64,12 +68,15 @@ final case class OneStageEvaluationPlan(
             veColBatches.map { veColBatch =>
               try {
                 logger.debug(s"Mapping batch ${veColBatch}")
-                val cols = veProcess.execute(
-                  libraryReference = libRef,
-                  functionName = veFunction.functionName,
-                  cols = veColBatch.cols,
-                  results = veFunction.results
-                )
+                val cols = measureRunningTime(
+                  veProcess.execute(
+                    libraryReference = libRef,
+                    functionName = veFunction.functionName,
+                    cols = veColBatch.cols,
+                    results = veFunction.results
+                  )
+                )(registerFunctionCallTime(_, veFunction.functionName))
+
                 logger.debug(s"Completed mapping ${veColBatch}, got ${cols}")
 
                 val outBatch = VeColBatch.fromList(cols)

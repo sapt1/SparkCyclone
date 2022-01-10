@@ -35,7 +35,6 @@ case class VeHashExchange(exchangeFunction: VeFunction, child: SparkPlan)
             )
 
             val filledOnes = multiBatches.filter(_._2.head.nonEmpty)
-            val timeTaken = Duration.between(startTime, Instant.now())
             filledOnes
           } finally {
             child.asInstanceOf[SupportsVeColBatch].dataCleanup.cleanup(veColBatch)

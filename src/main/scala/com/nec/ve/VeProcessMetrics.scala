@@ -6,6 +6,9 @@ trait VeProcessMetrics {
   def registerVeCall(timeTaken: Long): Unit
   def registerConversionTime(timeTaken: Long): Unit
   def registerTransferTime(timeTaken: Long): Unit
+  def registerSerializationTime(timeTaken: Long): Unit
+  def registerDeserializationTime(timeTaken: Long): Unit
+  def registerFunctionCallTime(timeTaken: Long, functionName: String): Unit
 
 }
 
@@ -16,5 +19,8 @@ object VeProcessMetrics {
     override def registerConversionTime(timeTaken: Long): Unit = ()
     override def registerTransferTime(timeTaken: Long): Unit = ()
     override def registerVeCall(timeTaken: Long): Unit = ()
+    override def registerFunctionCallTime(timeTaken: Long, functionName: String): Unit = ()
+    override def registerSerializationTime(timeTaken: Long): Unit = ()
+    override def registerDeserializationTime(timeTaken: Long): Unit = ()
   }
 }

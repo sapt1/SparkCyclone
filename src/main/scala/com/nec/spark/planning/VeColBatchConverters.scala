@@ -70,7 +70,6 @@ object VeColBatchConverters {
               }
 
               override def next(): UnInternalVeColBatch = {
-                val start = System.currentTimeMillis()
                 measureRunningTime {
                   arrowWriter.reset()
                   cb.setNumRows(0)

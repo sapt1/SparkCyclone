@@ -2,17 +2,40 @@ package com.nec.ve
 
 import java.nio.ByteBuffer
 
-import com.nec.arrow.ArrowTransferStructures.{nullable_bigint_vector, nullable_double_vector, nullable_int_vector, nullable_varchar_vector}
-import com.nec.arrow.VeArrowTransfers.{nullableBigintVectorToByteBuffer, nullableDoubleVectorToByteBuffer, nullableIntVectorToByteBuffer, nullableVarCharVectorVectorToByteBuffer}
+import com.nec.arrow.ArrowTransferStructures.{
+  nullable_bigint_vector,
+  nullable_double_vector,
+  nullable_int_vector,
+  nullable_varchar_vector
+}
+import com.nec.arrow.VeArrowTransfers.{
+  nullableBigintVectorToByteBuffer,
+  nullableDoubleVectorToByteBuffer,
+  nullableIntVectorToByteBuffer,
+  nullableVarCharVectorVectorToByteBuffer
+}
 import com.nec.spark.SparkCycloneExecutorPlugin
-import SparkCycloneExecutorPlugin.metrics.{measureRunningTime, registerTransferTime}
+import SparkCycloneExecutorPlugin.metrics.{
+  measureRunningTime,
+  registerDeserializationTime,
+  registerSerializationTime
+}
 import com.nec.spark.agile.CFunctionGeneration.{VeScalarType, VeString, VeType}
 import com.nec.spark.agile.SparkExpressionToCExpression.likelySparkType
 import com.nec.spark.planning.CEvaluationPlan.HasFieldVector.RichColumnVector
 import com.nec.spark.planning.VeColColumnarVector
 import com.nec.ve.VeColBatch.VeColVector
 import org.apache.arrow.memory.BufferAllocator
-import org.apache.arrow.vector.{BigIntVector, DateDayVector, FieldVector, Float8Vector, IntVector, SmallIntVector, ValueVector, VarCharVector}
+import org.apache.arrow.vector.{
+  BigIntVector,
+  DateDayVector,
+  FieldVector,
+  Float8Vector,
+  IntVector,
+  SmallIntVector,
+  ValueVector,
+  VarCharVector
+}
 import sun.misc.Unsafe
 import sun.nio.ch.DirectBuffer
 
@@ -79,7 +102,7 @@ object VeColBatch {
   def fromArrowColumnarBatch(
     columnarBatch: ColumnarBatch
   )(implicit veProcess: VeProcess, source: VeColVectorSource): VeColBatch = {
-    measureRunningTime{
+    measureRunningTime {
       VeColBatch(
         numRows = columnarBatch.numRows(),
         cols = (0 until columnarBatch.numCols()).map { colNo =>
@@ -138,14 +161,16 @@ object VeColBatch {
      */
     def serialize()(implicit veProcess: VeProcess): Array[Byte] = {
       val totalSize = bufferSizes.sum
-
-      val extractedBuffers = extractBuffers()
-
       val resultingArray = Array.ofDim[Byte](totalSize)
-      val bufferStarts = extractedBuffers.map(_.length).scanLeft(0)(_ + _)
-      bufferStarts.zip(extractedBuffers).foreach { case (start, buffer) =>
-        System.arraycopy(buffer, 0, resultingArray, start, buffer.length)
-      }
+
+      measureRunningTime {
+        val extractedBuffers = extractBuffers()
+
+        val bufferStarts = extractedBuffers.map(_.length).scanLeft(0)(_ + _)
+        bufferStarts.zip(extractedBuffers).foreach { case (start, buffer) =>
+          System.arraycopy(buffer, 0, resultingArray, start, buffer.length)
+        }
+      }(registerSerializationTime)
 
       assert(
         resultingArray.length == totalSize,
@@ -176,11 +201,13 @@ object VeColBatch {
     def deserialize(
       ba: Array[Byte]
     )(implicit source: VeColVectorSource, veProcess: VeProcess): VeColVector =
-      injectBuffers(newBuffers =
-        bufferSizes.scanLeft(0)(_ + _).zip(bufferSizes).map { case (bufferStart, bufferSize) =>
-          ba.slice(bufferStart, bufferStart + bufferSize)
-        }
-      ).newContainer()
+      registerDeserializationTime {
+        injectBuffers(newBuffers =
+          bufferSizes.scanLeft(0)(_ + _).zip(bufferSizes).map { case (bufferStart, bufferSize) =>
+            ba.slice(bufferStart, bufferStart + bufferSize)
+          }
+        ).newContainer()
+      }(registerDeserializationTime)
 
     private def newContainer()(implicit
       veProcess: VeProcess,

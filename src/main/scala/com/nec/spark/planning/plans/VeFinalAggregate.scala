@@ -2,6 +2,10 @@ package com.nec.spark.planning.plans
 
 import com.nec.spark.SparkCycloneExecutorPlugin.source
 import com.nec.spark.planning.{PlanCallsVeFunction, SupportsVeColBatch, VeFunction}
+import com.nec.spark.SparkCycloneExecutorPlugin.metrics.{
+  measureRunningTime,
+  registerFunctionCallTime
+}
 import com.nec.ve.VeColBatch
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.rdd.RDD
@@ -33,12 +37,14 @@ case class VeFinalAggregate(
 
           import com.nec.spark.SparkCycloneExecutorPlugin.veProcess
           VeColBatch.fromList {
-            try veProcess.execute(
-              libraryReference = libRef,
-              functionName = finalFunction.functionName,
-              cols = veColBatch.cols,
-              results = finalFunction.results
-            )
+            try measureRunningTime(
+              veProcess.execute(
+                libraryReference = libRef,
+                functionName = finalFunction.functionName,
+                cols = veColBatch.cols,
+                results = finalFunction.results
+              )
+            )(registerFunctionCallTime(_, veFunction.functionName))
             finally {
               logger.debug("Completed a final-aggregate of  a batch...")
               child.asInstanceOf[SupportsVeColBatch].dataCleanup.cleanup(veColBatch)
