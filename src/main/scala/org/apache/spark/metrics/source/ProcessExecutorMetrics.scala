@@ -81,6 +81,8 @@ final class ProcessExecutorMetrics extends VeProcessMetrics with Source {
   )
 
   metricRegistry.register(MetricRegistry.name("ve", "arrowConversionTimeHist"), arrowConversionHist)
+  metricRegistry.register(MetricRegistry.name("ve", "serializationTime"), serializationHist)
+  metricRegistry.register(MetricRegistry.name("ve", "deserializationTime"), deserializationHist)
 
   metricRegistry.register(
     MetricRegistry.name("ve", "transferTime"),
