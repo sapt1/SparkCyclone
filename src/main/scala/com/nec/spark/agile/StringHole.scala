@@ -95,7 +95,7 @@ object StringHole {
         s"frovedis::words $valuesWords = varchar_vector_to_words($refName);",
         s"std::vector<int> values{ ${words} };",
         s"""frovedis::words ${toCheckWords} = frovedis::split_to_words(values, " ");""",
-        "auto NOT_FOUND = numeric_limits<size_t>::max();",
+        "auto NOT_FOUND = std::numeric_limits<size_t>::max();",
         s"std::vector<size_t> ${matchingIds} = filter_words_dict(${valuesWords}, ${toCheckWords});",
         s"std::vector<size_t> ${filteredIds}(${refName}->count);",
         s"for(int i = 0; i < ${matchingIds}.size(); i++) {",
