@@ -86,6 +86,8 @@ endif()
     Files.write(targetDir.resolve("sparkcyclone.cpp"), cSource.getBytes("UTF-8"))
     try Builder.default.buildAndLink(tgtCl)
     catch {
+      case e: java.lang.InterruptedException =>
+        throw e
       case e: Throwable =>
         throw new RuntimeException(
           s"Could not build due to $e. CMakeLists: ${CMakeListsTXT}; source was '\n${cSource}\n'",
