@@ -46,7 +46,7 @@ object TPCHVESqlSpec {
       .config(key = "spark.plugins", value = classOf[AuroraSqlPlugin].getCanonicalName)
       .withExtensions { sse =>
         sse.injectPlannerStrategy(_ => {
-          new VERewriteStrategy(VeRewriteStrategyOptions.default.copy(failFast = true))
+          new VERewriteStrategy(VeRewriteStrategyOptions.default.copy(failFast = false))
         })
         sse.injectColumnar(compilerRule)
         sse.injectColumnar(_ => new VeColumnarRule)
