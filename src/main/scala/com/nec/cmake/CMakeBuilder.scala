@@ -83,12 +83,15 @@ endif()
 
     val tgtCl = targetDir.resolve("CMakeLists.txt")
     Files.write(tgtCl, CMakeListsTXT.getBytes("UTF-8"))
-    Files.write(targetDir.resolve("sparkcyclone.cpp"), cSource.getBytes("UTF-8"))
+    val location = targetDir.resolve("sparkcyclone.cpp")
+    Files.write(location, cSource.getBytes("UTF-8"))
     try Builder.default.buildAndLink(tgtCl)
     catch {
+      case e: java.lang.InterruptedException =>
+        throw e
       case e: Throwable =>
         throw new RuntimeException(
-          s"Could not build due to $e. CMakeLists: ${CMakeListsTXT}; source was '\n${cSource}\n'",
+          s"Could not build due to $e. CMakeLists: ${CMakeListsTXT}; source was in '${location.toAbsolutePath}'",
           e
         )
     }

@@ -1,7 +1,8 @@
-NCC = /opt/nec/ve/bin/ncc
+NCC = $(shell ls /opt/nec/ve/bin/ncc 2>/dev/null || echo gcc)
 NCC_OPTS = -xc++
 ALL = cyclone.so
 all: $(ALL)
+.PHONY: clean
 DEPS = cyclone.cc \
 	cyclone.hpp \
 	frovedis/core/conditions_for_find.hpp \

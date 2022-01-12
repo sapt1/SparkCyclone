@@ -208,7 +208,7 @@ TPC / testOptions := {
 /** CMake specific configuration */
 inConfig(CMake)(Defaults.testTasks)
 def cmakeFilter(name: String): Boolean = name.startsWith("com.nec.cmake")
-CMake / fork := false
+CMake / fork := true
 CMake / testOptions := Seq(Tests.Filter(cmakeFilter))
 
 Global / cancelable := true
