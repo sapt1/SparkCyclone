@@ -441,6 +441,19 @@ object CFunctionGeneration {
         new BigIntVector(cVector.name, bufferAllocator)
     }
 
+  val KeyHeaders = CodeLines.from(
+    """#include "transfer-definitions.hpp"""",
+    """#include "cyclone.hpp"""",
+    "#include <cmath>",
+    "#include <bitset>",
+    "#include <string>",
+    "#include <iostream>",
+    "#include <tuple>",
+    "#include \"tuple_hash.hpp\"",
+    """#include "frovedis/dataframe/join.hpp"""",
+    """#include "frovedis/core/set_operations.hpp""""
+  )
+
   final case class CFunction(
     inputs: List[CVector],
     outputs: List[CVector],
@@ -540,20 +553,9 @@ object CFunctionGeneration {
       )
     }
 
-    def toCodeLinesHeaderPtr(functionName: String): CodeLines =
-      CodeLines.from(
-        """#include "transfer-definitions.hpp"""",
-        """#include "cyclone.hpp"""",
-        "#include <cmath>",
-        "#include <bitset>",
-        "#include <string>",
-        "#include <iostream>",
-        "#include <tuple>",
-        "#include \"tuple_hash.hpp\"",
-        """#include "frovedis/dataframe/join.hpp"""",
-        """#include "frovedis/core/set_operations.hpp"""",
-        toCodeLinesNoHeaderOutPtr(functionName)
-      )
+    def toCodeLinesHeaderPtr(functionName: String): CodeLines = {
+      CodeLines.from(KeyHeaders, toCodeLinesNoHeaderOutPtr(functionName))
+    }
 
     def toCodeLinesNoHeaderOutPtr(functionName: String): CodeLines = {
       CodeLines.from(
