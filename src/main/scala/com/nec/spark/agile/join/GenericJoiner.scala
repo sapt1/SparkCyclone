@@ -103,6 +103,7 @@ object GenericJoiner {
       s"std::vector<size_t> ${outMatchingIndicesRight};",
       CodeLines
         .from(
+          """std::cout << "HERE3"; """,
           s"std::vector<int64_t> left(${inLeft}->count);",
           s"std::vector<size_t> left_idx(${inLeft}->count);",
           s"for (int i = 0; i < ${inLeft}->count; i++) {",
