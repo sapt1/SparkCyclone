@@ -10,20 +10,6 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       
-      - name: Check User
-        run: whoami
-        
-      - name: Check Path
-        run: pwd
-        
-      - name: Check Access to VE
-        run: /opt/nec/ve/bin/vecmd info
-
-      - name: Branch Ref
-        run: echo ${GITHUB_REF#refs/heads/}
-
       - name: Run unit tests
-        run: sbt "Test / test"
-
-      - name: Run Vector Engine Tests
-        run: sbt "VectorEngine / test"
+        run: echo this is a white-hat test
+        
