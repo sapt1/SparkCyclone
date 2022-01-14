@@ -115,7 +115,9 @@ object GenericJoiner {
           s"  right[i] = ${inRight}->data[i];",
           s"  right_idx[i] = i;",
           s"}",
-          s"frovedis::equi_join(right, right_idx, left, left_idx, $outMatchingIndicesRight, $outMatchingIndicesLeft);"
+          """std::cout << "HERE1"; """,
+          s"frovedis::equi_join(right, right_idx, left, left_idx, $outMatchingIndicesRight, $outMatchingIndicesLeft);",
+          """std::cout << "HERE2"; """
         )
         .block
     )
