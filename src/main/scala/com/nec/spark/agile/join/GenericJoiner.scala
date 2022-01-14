@@ -106,6 +106,7 @@ object GenericJoiner {
           """std::cout << "HERE3"; """,
           s"std::vector<int64_t> left(${inLeft}->count);",
           s"std::vector<size_t> left_idx(${inLeft}->count);",
+          """std::cout << "HERE5"; """,
           s"for (int i = 0; i < ${inLeft}->count; i++) {",
           s"  left[i] = ${inLeft}->data[i];",
           s"  left_idx[i] = i;",
@@ -117,7 +118,6 @@ object GenericJoiner {
           s"  right[i] = ${inRight}->data[i];",
           s"  right_idx[i] = i;",
           s"}",
-          """std::cout << "HERE5"; """,
           """std::cout << "HERE1"; """,
           s"frovedis::equi_join(right, right_idx, left, left_idx, $outMatchingIndicesRight, $outMatchingIndicesLeft);",
           """std::cout << "HERE2"; """
