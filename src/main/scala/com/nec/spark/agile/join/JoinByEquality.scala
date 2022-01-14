@@ -69,7 +69,7 @@ final case class JoinByEquality(
             .from(
               s"frovedis::words ${left_words} = varchar_vector_to_words(${left});",
               s"frovedis::dict ${left_dict} = frovedis::make_dict(${left_words});",
-              """std::cout <<"HERE1"  """
+              """std::cout << "HERE1"; """
             ),
           computeStringJoin(
             leftDictIndices = left_dict_indices,
