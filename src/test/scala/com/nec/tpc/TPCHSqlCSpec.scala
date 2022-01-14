@@ -1091,9 +1091,8 @@ abstract class TPCHSqlCSpec
       select
         p_brand,
         p_type,
-        p_size,
-        count(distinct ps_suppkey) as supplier_cnt
-      from
+        p_size
+        from
         partsupp,
         part
       where
@@ -1114,7 +1113,6 @@ abstract class TPCHSqlCSpec
         p_type,
         p_size
       order by
-        supplier_cnt desc,
         p_brand,
         p_type,
         p_size
@@ -1146,7 +1144,7 @@ abstract class TPCHSqlCSpec
 
     val sql = s"""
       select
-        (sum(l_extendedprice) / 7.0) as avg_yearly
+        l_extendedprice
       from
         lineitem,
         part
@@ -1154,14 +1152,6 @@ abstract class TPCHSqlCSpec
         p_partkey = l_partkey
         and p_brand = '$brand'
         and p_container = '$container'
-        and l_quantity < (
-          select
-            0.2 * avg(l_quantity)
-          from
-            lineitem
-          where
-            l_partkey = p_partkey
-        )
     """
     sparkSession.sql(sql).debugSqlHere { ds =>
       assert(
