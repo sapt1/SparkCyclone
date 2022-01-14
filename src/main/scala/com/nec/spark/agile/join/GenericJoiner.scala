@@ -108,6 +108,7 @@ object GenericJoiner {
           s"std::vector<size_t> left_idx(${inLeft}->count);",
           """std::cout << "HERE5"; """,
           s"for (int i = 0; i < ${inLeft}->count; i++) {",
+          """std::cout << "HEREFOR"; """,
           s"  left[i] = ${inLeft}->data[i];",
           s"  left_idx[i] = i;",
           s"}",
